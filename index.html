@@ -545,10 +545,9 @@ setInterval(checkStale, 10000);
 
 async function load(){
 try{
-  var r = await fetch('https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=gh-pages&t=' + Date.now(), {cache:'no-store'});
-  var gh = await r.json();
-  if(gh.error) throw new Error(gh.error);
-  var d = JSON.parse(atob(gh.content));
+  var r = await fetch('data/data.json?t=' + Date.now(), {cache:'no-store'});
+  var d = await r.json();
+  if(d.error) throw new Error(d.error);
   var t = d.ticker;
   var s = d.strategy;
   var p = parseFloat(t.lastPrice);
