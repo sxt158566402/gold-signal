@@ -560,6 +560,8 @@ async function doUserLogin(){
     document.getElementById('loginOverlay').style.display='none';
     document.getElementById('mainContent').classList.add('authed');
     startApp();
+    // 登录后加载图表和统计
+    setTimeout(function() { loadChart('30d'); updateStats(); }, 500);
   }catch(e){err.textContent='網路錯誤，請重試';}
 }
 
@@ -567,6 +569,8 @@ function checkLogin(){
   if(currentUser){
     document.getElementById('loginOverlay').style.display='none';
     document.getElementById('mainContent').classList.add('authed');
+    // 已登录用户，加载图表和统计
+    setTimeout(function() { loadChart('30d'); updateStats(); }, 500);
     // 验证 token 有效性
     var email=currentUser;
     var pw=localStorage.getItem('gs_user_pw')||'';
