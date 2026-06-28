@@ -1,15 +1,32 @@
+<<<<<<< HEAD
 import json, urllib.request, datetime
+=======
+import json, urllib.request, datetime, os
+>>>>>>> main
 
 ticker_url = 'https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT'
 kline_url = 'https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50'
 
+<<<<<<< HEAD
 ticker = json.loads(urllib.request.urlopen(ticker_url, timeout=10).read())
 klines = json.loads(urllib.request.urlopen(kline_url, timeout=10).read())
+=======
+try:
+    ticker = json.loads(urllib.request.urlopen(ticker_url, timeout=15).read())
+    klines = json.loads(urllib.request.urlopen(kline_url, timeout=15).read())
+except Exception as e:
+    print(f"API error: {e}")
+    exit(1)
+>>>>>>> main
 
 closes = [float(k[4]) for k in klines]
 highs = [float(k[2]) for k in klines]
 lows = [float(k[3]) for k in klines]
 
+<<<<<<< HEAD
+=======
+# RSI
+>>>>>>> main
 period = 14
 gains, losses = 0, 0
 for i in range(len(closes)-period, len(closes)):
@@ -18,12 +35,25 @@ for i in range(len(closes)-period, len(closes)):
     else: losses -= d
 rsi = 100 - (100/(1+gains/losses)) if losses > 0 else 50
 
+<<<<<<< HEAD
 s = closes[-20:]
 m = sum(s)/20
 std = (sum((x-m)**2 for x in s)/20)**0.5
 ema7 = sum(closes[-7:])/min(7,len(closes))
 ema25 = sum(closes[-25:])/min(25,len(closes))
 
+=======
+# BB
+s = closes[-20:]
+m = sum(s)/20
+std = (sum((x-m)**2 for x in s)/20)**0.5
+
+# EMA
+ema7 = sum(closes[-7:])/min(7,len(closes))
+ema25 = sum(closes[-25:])/min(25,len(closes))
+
+# Signal
+>>>>>>> main
 rh, rl = highs[-10:], lows[-10:]
 maxH, minL = max(rh), min(rl)
 p = float(ticker['lastPrice'])
@@ -41,6 +71,13 @@ data = {
     'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)
 }
 
+<<<<<<< HEAD
 with open('data/data.json', 'w') as f:
     json.dump(data, f, indent=2)
 print('Updated:', p, 'RSI:', round(rsi,2))
+=======
+os.makedirs('data', exist_ok=True)
+with open('data/data.json', 'w') as f:
+    json.dump(data, f, indent=2)
+print(f'OK: ${p} RSI={round(rsi,2)}')
+>>>>>>> main
