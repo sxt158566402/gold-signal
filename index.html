@@ -381,7 +381,7 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 </section>
 
 <script>
-/* ===== 金价走势图 ===== */
+/* ===== 金价K线图 ===== */
 var chartData = [];
 
 async function loadChart(days) {
@@ -398,13 +398,13 @@ async function loadChart(days) {
         close: parseFloat(k[4])
       };
     });
-    drawChart();
+    drawKlineChart();
   } catch(e) {
     console.log('Chart error:', e);
   }
 }
 
-function drawChart() {
+function drawKlineChart() {
   var canvas = document.getElementById('priceChart');
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
@@ -415,9 +415,13 @@ function drawChart() {
   ctx.clearRect(0, 0, w, h);
   if (chartData.length === 0) return;
   
-  var closes = chartData.map(function(d) { return d.close; });
-  var min = Math.min.apply(null, closes) * 0.998;
-  var max = Math.max.apply(null, closes) * 1.002;
+  // 计算价格范围
+  var allPrices = [];
+  chartData.forEach(function(d) {
+    allPrices.push(d.high, d.low);
+  });
+  var min = Math.min.apply(null, allPrices) * 0.998;
+  var max = Math.max.apply(null, allPrices) * 1.002;
   var range = max - min;
   
   // 画网格线
@@ -435,38 +439,36 @@ function drawChart() {
     ctx.fillText(price.toFixed(0), 2, y - 2);
   }
   
-  // 画价格线
-  ctx.beginPath();
-  ctx.strokeStyle = '#1e90ff';
-  ctx.lineWidth = 2;
+  // 画K线
+  var kWidth = Math.max(4, (w / chartData.length) * 0.6);
+  var gap = w / chartData.length;
+  
   for (var i = 0; i < chartData.length; i++) {
-    var x = (w / (chartData.length - 1)) * i;
-    var y = h - ((chartData[i].close - min) / range) * (h - 20) - 10;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    var d = chartData[i];
+    var x = gap * i + gap / 2;
+    var isUp = d.close >= d.open;
+    var color = isUp ? '#2ed573' : '#ff4757';
+    
+    // 计算坐标
+    var openY = h - ((d.open - min) / range) * (h - 20) - 10;
+    var closeY = h - ((d.close - min) / range) * (h - 20) - 10;
+    var highY = h - ((d.high - min) / range) * (h - 20) - 10;
+    var lowY = h - ((d.low - min) / range) * (h - 20) - 10;
+    
+    // 画影线（上下影线）
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.moveTo(x, highY);
+    ctx.lineTo(x, lowY);
+    ctx.stroke();
+    
+    // 画实体
+    var bodyTop = Math.min(openY, closeY);
+    var bodyHeight = Math.abs(closeY - openY) || 1;
+    ctx.fillStyle = color;
+    ctx.fillRect(x - kWidth / 2, bodyTop, kWidth, bodyHeight);
   }
-  ctx.stroke();
-  
-  // 画渐变填充
-  ctx.lineTo(w, h);
-  ctx.lineTo(0, h);
-  ctx.closePath();
-  var gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, 'rgba(30,144,255,0.3)');
-  gradient.addColorStop(1, 'rgba(30,144,255,0)');
-  ctx.fillStyle = gradient;
-  ctx.fill();
-  
-  // 画最新价格点
-  var lastX = w;
-  var lastY = h - ((chartData[chartData.length-1].close - min) / range) * (h - 20) - 10;
-  ctx.beginPath();
-  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#1e90ff';
-  ctx.fill();
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 2;
-  ctx.stroke();
 }
 
 /* ===== 仓位计算器 ===== */
