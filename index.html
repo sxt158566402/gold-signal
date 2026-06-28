@@ -89,7 +89,7 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div class="ii"><div class="n">EMA7</div><div class="v" id="i7">--</div></div>
 <div class="ii"><div class="n">EMA25</div><div class="v" id="i2">--</div></div>
 <div class="ii"><div class="n">BB上軌</div><div class="v" id="iU">--</div></div>
-<div class="ii"><div class="n">BB中軌</span></div><div class="v" id="iM">--</div></div>
+<div class="ii"><div class="n">BB中軌</div><div class="v" id="iM">--</div></div>
 <div class="ii"><div class="n">BB下軌</div><div class="v" id="iL">--</div></div>
 </div>
 </section>
@@ -102,71 +102,82 @@ function sc(ok,t){var e=document.getElementById('cs');e.className='conn '+(ok?'o
 function f(n,d){return parseFloat(n).toFixed(d||2);}
 function ft(ts){var d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');}
 if(sy){sy.getVoices();sy.onvoiceschanged=function(){sy.getVoices();};}
-function calcRSI(c,p){if(c.length<p+1)return 50;var g=0,l=0;for(var i=c.length-p;i<c.length;i++){var d=c[i]-c[i-1];if(d>0)g+=d;else l-=d;}return l===0?100:100-(100/(1+g/l));}
-function calcBB(c,p){var s=c.slice(-p),m=0;for(var i=0;i<s.length;i++)m+=s[i];m/=p;var v=0;for(var i=0;i<s.length;i++)v+=(s[i]-m)*(s[i]-m);var std=Math.sqrt(v/p);return{upper:m+2*std,middle:m,lower:m-2*std};}
+
+var lastSignal = '';
+
 async function load(){
 try{
-var r1=await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');
-var t=await r1.json();
-var r2=await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50');
-var k=await r2.json();
-var closes=k.map(function(x){return parseFloat(x[4]);});
-var highs=k.map(function(x){return parseFloat(x[2]);});
-var lows=k.map(function(x){return parseFloat(x[3]);});
-var rsi=calcRSI(closes,14);
-var bb=calcBB(closes,20);
-var ema7=0;for(var i=Math.max(0,closes.length-7);i<closes.length;i++)ema7+=closes[i];ema7/=Math.min(7,closes.length);
-var ema25=0;for(var i=Math.max(0,closes.length-25);i<closes.length;i++)ema25+=closes[i];ema25/=Math.min(25,closes.length);
-var p=parseFloat(t.lastPrice),c=parseFloat(t.priceChange),cp=parseFloat(t.priceChangePercent);
-document.getElementById('mp').textContent='$'+f(p);
-document.getElementById('cv').textContent=(c>=0?'+':'')+f(c);
-document.getElementById('cv').className=c>=0?'up':'down';
-document.getElementById('cp').textContent='('+(cp>=0?'+':'')+f(cp)+'%)';
-document.getElementById('cp').className=cp>=0?'up':'down';
-document.getElementById('h24').textContent='$'+f(t.highPrice);
-document.getElementById('l24').textContent='$'+f(t.lowPrice);
-document.getElementById('rng').textContent='$'+f(t.highPrice-t.lowPrice);
-document.getElementById('dt').textContent='更新: '+ft(Date.now())+' (每10秒)';
-sc(true,'已連接');
-document.getElementById('sw').classList.add('hid');
-document.getElementById('ls').classList.add('hid');
-document.getElementById('ss').classList.add('hid');
-var re=document.getElementById('iR');re.textContent=f(rsi,1);re.className='v'+(rsi<30?' ov':rsi>70?' ob':'');
-document.getElementById('i7').textContent='$'+f(ema7);
-document.getElementById('i2').textContent='$'+f(ema25);
-document.getElementById('iU').textContent='$'+f(bb.upper);
-document.getElementById('iM').textContent='$'+f(bb.middle);
-document.getElementById('iL').textContent='$'+f(bb.lower);
-var rh=highs.slice(-10),rl=lows.slice(-10);
-var maxH=Math.max.apply(null,rh),minL=Math.min.apply(null,rl);
-var sig='waiting',reason='監控中';
-if(p>maxH&&rsi>50){sig='long';reason='突破近10根K線高點+RSI偏多';}
-else if(p<minL&&rsi<50){sig='short';reason='跌破近10根K線低點+RSI偏空';}
-if(sig==='long'){
-document.getElementById('ls').classList.remove('hid');
-document.getElementById('le').textContent='$'+f(p);
-document.getElementById('lsl').textContent='$'+f(p-3);
-document.getElementById('ltp').textContent='$'+f(p+6);
-document.getElementById('lt').textContent=ft(Date.now());
-document.getElementById('lr').textContent='📋 '+reason;
-sp('做多信號！進場價'+f(p)+'，記得止損！');vb();
-}else if(sig==='short'){
-document.getElementById('ss').classList.remove('hid');
-document.getElementById('se').textContent='$'+f(p);
-document.getElementById('ssl').textContent='$'+f(p+3);
-document.getElementById('stp').textContent='$'+f(p-6);
-document.getElementById('st').textContent=ft(Date.now());
-document.getElementById('sr').textContent='📋 '+reason;
-sp('做空信號！進場價'+f(p)+'，記得止損！');vb();
-}else{
-document.getElementById('sw').classList.remove('hid');
+  var r = await fetch('data/data.json?t=' + Date.now(), {cache:'no-store'});
+  var d = await r.json();
+  if(d.error) throw new Error(d.error);
+  var t = d.ticker;
+  var s = d.strategy;
+  var p = parseFloat(t.lastPrice);
+  var c = parseFloat(t.priceChange);
+  var cp = parseFloat(t.priceChangePercent);
+  
+  document.getElementById('mp').textContent = '$' + f(p);
+  document.getElementById('cv').textContent = (c>=0?'+':'') + f(c);
+  document.getElementById('cv').className = c>=0?'up':'down';
+  document.getElementById('cp').textContent = '(' + (cp>=0?'+':'') + f(cp) + '%)';
+  document.getElementById('cp').className = cp>=0?'up':'down';
+  document.getElementById('h24').textContent = '$' + f(t.highPrice);
+  document.getElementById('l24').textContent = '$' + f(t.lowPrice);
+  document.getElementById('rng').textContent = '$' + f(t.highPrice - t.lowPrice);
+  
+  var now = new Date();
+  document.getElementById('dt').textContent = '更新: ' + ft(d.timestamp) + ' (每分鐘)';
+  sc(true, '已連接');
+  
+  document.getElementById('sw').classList.add('hid');
+  document.getElementById('ls').classList.add('hid');
+  document.getElementById('ss').classList.add('hid');
+  
+  if(s.indicators){
+    var i = s.indicators;
+    var re = document.getElementById('iR');
+    re.textContent = f(i.rsi, 1);
+    re.className = 'v' + (i.rsi<30?' ov':i.rsi>70?' ob':'');
+    document.getElementById('i7').textContent = '$' + f(i.ema7);
+    document.getElementById('i2').textContent = '$' + f(i.ema25);
+    document.getElementById('iU').textContent = '$' + f(i.bbUpper);
+    document.getElementById('iM').textContent = '$' + f(i.bbMiddle);
+    document.getElementById('iL').textContent = '$' + f(i.bbLower);
+  }
+  
+  if(s.signal === 'long'){
+    document.getElementById('ls').classList.remove('hid');
+    document.getElementById('le').textContent = '$' + f(s.price);
+    document.getElementById('lsl').textContent = '$' + f(s.price - 3);
+    document.getElementById('ltp').textContent = '$' + f(s.price + 6);
+    document.getElementById('lt').textContent = ft(d.timestamp);
+    document.getElementById('lr').textContent = '📋 ' + s.reason;
+    if(lastSignal !== 'long') {
+      sp('做多信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      lastSignal = 'long';
+    }
+  } else if(s.signal === 'short'){
+    document.getElementById('ss').classList.remove('hid');
+    document.getElementById('se').textContent = '$' + f(s.price);
+    document.getElementById('ssl').textContent = '$' + f(s.price + 3);
+    document.getElementById('stp').textContent = '$' + f(s.price - 6);
+    document.getElementById('st').textContent = ft(d.timestamp);
+    document.getElementById('sr').textContent = '📋 ' + s.reason;
+    if(lastSignal !== 'short') {
+      sp('做空信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      lastSignal = 'short';
+    }
+  } else {
+    document.getElementById('sw').classList.remove('hid');
+    lastSignal = '';
+  }
+} catch(e){
+  console.error(e);
+  sc(false, '斷線-重試中...');
 }
-}catch(e){
-console.error(e);sc(false,'斷線-重試中...');
-setTimeout(load,3000);
 }
-}
-load();setInterval(load,10000);
+load();
+setInterval(load, 30000);
 </script>
 </body>
 </html>
