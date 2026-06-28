@@ -308,6 +308,7 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 </div>
 <div style="position:relative;height:200px;background:rgba(0,0,0,.3);border-radius:8px;padding:10px;width:100%;box-sizing:border-box">
 <canvas id="priceChart" style="width:100%;height:100%"></canvas>
+<div id="chartDebug" style="position:absolute;bottom:5px;left:5px;color:#FFD700;font-size:10px;background:rgba(0,0,0,.5);padding:4px 8px;border-radius:4px">加载中...</div>
 </div>
 </div>
 </section>
@@ -388,6 +389,8 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 var chartData = [];
 
 async function loadChart(period) {
+  var debugDiv = document.getElementById('chartDebug');
+  if (debugDiv) debugDiv.textContent = '加载中...';
   try {
     console.log('loadChart开始, period:', period);
     // period: '1h'=1小时K线24根, '4h'=4小时K线30根
@@ -396,6 +399,7 @@ async function loadChart(period) {
     var r = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=' + interval + '&limit=' + limit, {cache: 'no-store'});
     var data = await r.json();
     console.log('获取到K线数据:', data.length, '根');
+    if (debugDiv) debugDiv.textContent = '获取到' + data.length + '根数据';
     chartData = data.map(function(k) {
       return {
         time: new Date(k[0]).toLocaleString('zh-CN', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}),
@@ -406,16 +410,20 @@ async function loadChart(period) {
       };
     });
     console.log('chartData转换完成:', chartData.length, '根');
+    if (debugDiv) debugDiv.textContent = '转换完成，开始绘制';
     drawKlineChart();
   } catch(e) {
     console.log('Chart error:', e);
+    if (debugDiv) debugDiv.textContent = '错误: ' + e.message;
   }
 }
 
 function drawKlineChart() {
   var canvas = document.getElementById('priceChart');
+  var debugDiv = document.getElementById('chartDebug');
   if (!canvas) {
     console.log('找不到Canvas元素');
+    if (debugDiv) debugDiv.textContent = '找不到Canvas';
     return;
   }
   var ctx = canvas.getContext('2d');
@@ -423,6 +431,7 @@ function drawKlineChart() {
   // 等待DOM渲染完成
   setTimeout(function() {
     console.log('开始绘制K线图...');
+    if (debugDiv) debugDiv.textContent = '绘制中...';
     // 获取父容器的宽度
     var parent = canvas.parentElement;
     var w = parent.offsetWidth - 20;
@@ -434,9 +443,11 @@ function drawKlineChart() {
     ctx.clearRect(0, 0, w, h);
     if (chartData.length === 0) {
       console.log('chartData为空');
+      if (debugDiv) debugDiv.textContent = '无数据';
       return;
     }
     console.log('chartData长度:', chartData.length);
+    if (debugDiv) debugDiv.textContent = chartData.length + '根K线';
     
     // 计算价格范围
     var allPrices = [];
