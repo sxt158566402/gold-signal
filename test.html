@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试K线图</title>
+<style>
+body {
+  background: #0f0f1a;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+canvas {
+  background: rgba(0,0,0,.3);
+  border: 2px solid #FFD700;
+  width: 100%;
+  height: 200px;
+}
+</style>
+</head>
+<body>
+<h2>测试K线图</h2>
+<canvas id="testChart"></canvas>
+
+<script>
+// 模拟数据
+var mockData = [
+  {open: 3200, high: 3220, low: 3190, close: 3215},
+  {open: 3215, high: 3230, low: 3210, close: 3225},
+  {open: 3225, high: 3240, low: 3220, close: 3235},
+  {open: 3235, high: 3245, low: 3225, close: 3230},
+  {open: 3230, high: 3250, low: 3228, close: 3245},
+  {open: 3245, high: 3260, low: 3240, close: 3255},
+  {open: 3255, high: 3270, low: 3250, close: 3265},
+  {open: 3265, high: 3280, low: 3260, close: 3275},
+  {open: 3275, high: 3290, low: 3270, close: 3285},
+  {open: 3285, high: 3300, low: 3280, close: 3295}
+];
+
+var canvas = document.getElementById('testChart');
+var ctx = canvas.getContext('2d');
+
+// 延迟绘制
+setTimeout(function() {
+  var w = canvas.offsetWidth;
+  var h = canvas.offsetHeight;
+  canvas.width = w;
+  canvas.height = h;
+  
+  console.log('Canvas size:', w, h);
+  
+  var allPrices = [];
+  mockData.forEach(function(d) {
+    allPrices.push(d.high, d.low);
+  });
+  var min = Math.min.apply(null, allPrices) * 0.998;
+  var max = Math.max.apply(null, allPrices) * 1.002;
+  var range = max - min;
+  
+  // 画网格
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  for (var i = 0; i < 5; i++) {
+    var y = (h / 5) * i + 10;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  
+  // 画K线
+  var gap = w / mockData.length;
+  for (var i = 0; i < mockData.length; i++) {
+    var d = mockData[i];
+    var x = gap * i + gap / 2;
+    var isUp = d.close >= d.open;
+    var color = isUp ? '#2ed573' : '#ff4757';
+    
+    var yHigh = 10 + ((max - d.high) / range) * (h - 20);
+    var yLow = 10 + ((max - d.low) / range) * (h - 20);
+    var yOpen = 10 + ((max - d.open) / range) * (h - 20);
+    var yClose = 10 + ((max - d.close) / range) * (h - 20);
+    
+    // 影线
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, yHigh);
+    ctx.lineTo(x, yLow);
+    ctx.stroke();
+    
+    // 实体
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 3, Math.min(yOpen, yClose), 6, Math.abs(yClose - yOpen) || 1);
+  }
+  
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px Arial';
+  ctx.fillText('测试成功！', 10, 20);
+}, 100);
+</script>
+</body>
+</html>
