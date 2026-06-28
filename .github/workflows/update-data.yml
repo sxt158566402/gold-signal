@@ -15,16 +15,13 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Fetch Binance data and save
+      - name: Fetch data and update
         run: |
           python3 -c "
           import json, urllib.request, datetime
           
-          ticker_url = 'https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT'
-          kline_url = 'https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50'
-          
-          ticker = json.loads(urllib.request.urlopen(ticker_url, timeout=10).read())
-          klines = json.loads(urllib.request.urlopen(kline_url, timeout=10).read())
+          ticker = json.loads(urllib.request.urlopen('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT', timeout=10).read())
+          klines = json.loads(urllib.request.urlopen('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50', timeout=10).read())
           
           closes = [float(k[4]) for k in klines]
           highs = [float(k[2]) for k in klines]
@@ -36,12 +33,11 @@ jobs:
               d = closes[i] - closes[i-1]
               if d > 0: gains += d
               else: losses -= d
-          rsi = 100 - (100/(1+gains/losses)) if losses > 0 else (100 if losses==0 else 50)
+          rsi = 100 - (100/(1+gains/losses)) if losses > 0 else 50
           
           s = closes[-20:]
           m = sum(s)/20
           std = (sum((x-m)**2 for x in s)/20)**0.5
-          
           ema7 = sum(closes[-7:])/min(7,len(closes))
           ema25 = sum(closes[-25:])/min(25,len(closes))
           
@@ -56,28 +52,18 @@ jobs:
           
           data = {
               'ticker': ticker,
-              'strategy': {
-                  'signal': signal,
-                  'price': p,
-                  'reason': reason,
-                  'indicators': {
-                      'rsi': round(rsi, 2),
-                      'ema7': round(ema7, 2),
-                      'ema25': round(ema25, 2),
-                      'bbUpper': round(m + 2*std, 2),
-                      'bbMiddle': round(m, 2),
-                      'bbLower': round(m - 2*std, 2)
-                  }
-              },
-              'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+              'strategy': {'signal': signal, 'price': p, 'reason': reason,
+                  'indicators': {'rsi': round(rsi,2), 'ema7': round(ema7,2), 'ema25': round(ema25,2),
+                      'bbUpper': round(m+2*std,2), 'bbMiddle': round(m,2), 'bbLower': round(m-2*std,2)}},
+              'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)
           }
           
           with open('data/data.json', 'w') as f:
-              json.dump(data, f)
-          print('Updated:', ticker['lastPrice'])
+              json.dump(data, f, indent=2)
+          print('Updated:', p)
           "
 
-      - name: Commit and push to gh-pages
+      - name: Push to gh-pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
