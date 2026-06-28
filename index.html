@@ -12,7 +12,10 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 .conn{font-size:12px;color:#888;display:flex;align-items:center;gap:6px}
 .conn .dot{width:8px;height:8px;border-radius:50%;background:#666}
 .conn.ok .dot{background:#2ed573;box-shadow:0 0 6px #2ed573}
-.conn.err .dot{background:#ff4757}
+.conn.warn .dot{background:#ffa502;box-shadow:0 0 6px #ffa502}
+.conn.err .dot{background:#ff4757;box-shadow:0 0 6px #ff4757}
+.offline-bar{background:#ff4757;color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:700;display:none}
+.offline-bar.show{display:block}
 .hero{text-align:center;padding:30px 16px 20px;background:linear-gradient(180deg,#12121a,#0a0a0f)}
 .hero .label{font-size:13px;color:#888;margin-bottom:4px}
 .hero .price{font-size:52px;font-weight:800;color:#FFD700;line-height:1.1}
@@ -65,9 +68,10 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <p class="s">信號觸發時語音播報：「可以下單了，記得止損！」</p>
 <button class="abtn" onclick="ea()">🔊 啟用喇叭提醒</button>
 </div></div>
+<div class="offline-bar" id="offbar"></div>
 <header class="bar"><div class="logo">⚡ GoldSniper</div><div class="conn" id="cs"><span class="dot"></span><span class="t">連接中...</span></div></header>
 <section class="hero">
-<div class="label">XAUUSD 實時價格</div>
+<div class="label">PAXG (黃金) 實時價格</div>
 <div class="price" id="mp">----</div>
 <div class="chg"><span id="cv">--</span><span id="cp">--</span></div>
 <div class="ranges">
@@ -103,7 +107,27 @@ function f(n,d){return parseFloat(n).toFixed(d||2);}
 function ft(ts){var d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');}
 if(sy){sy.getVoices();sy.onvoiceschanged=function(){sy.getVoices();};}
 
-var lastSignal = '';
+var lastSignal = '', lastTs = 0;
+
+function checkStale(){
+  if(!lastTs) return;
+  var age = (Date.now() - lastTs) / 1000;
+  var el = document.getElementById('offbar');
+  var cs = document.getElementById('cs');
+  if(age > 180){
+    el.classList.add('show');
+    el.textContent = '⚠️ 數據已停止更新 ' + Math.floor(age/60) + ' 分鐘，請聯繫管理員啟動服務';
+    cs.className = 'conn err';
+    cs.querySelector('.t').textContent = '掉線';
+  } else if(age > 90){
+    el.classList.remove('show');
+    cs.className = 'conn warn';
+    cs.querySelector('.t').textContent = '數據延遲';
+  } else {
+    el.classList.remove('show');
+  }
+}
+setInterval(checkStale, 10000);
 
 async function load(){
 try{
@@ -125,8 +149,10 @@ try{
   document.getElementById('l24').textContent = '$' + f(t.lowPrice);
   document.getElementById('rng').textContent = '$' + f(t.highPrice - t.lowPrice);
   
-  var now = new Date();
-  document.getElementById('dt').textContent = '更新: ' + ft(d.timestamp) + ' (每分鐘)';
+  lastTs = d.timestamp;
+  var age = Math.floor((Date.now() - d.timestamp) / 1000);
+  var status = age < 90 ? '✅ 實時' : '⚠️ 延遲 ' + age + '秒';
+  document.getElementById('dt').textContent = '更新: ' + ft(d.timestamp) + ' | ' + status;
   sc(true, '已連接');
   
   document.getElementById('sw').classList.add('hid');
