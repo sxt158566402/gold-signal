@@ -306,8 +306,8 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <button onclick="loadChart('4h')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.2);border:1px solid rgba(30,144,255,.4);border-radius:4px;color:#1e90ff;cursor:pointer">4小时</button>
 </div>
 </div>
-<div style="position:relative;height:200px;background:rgba(0,0,0,.3);border-radius:8px;padding:10px">
-<canvas id="priceChart"></canvas>
+<div style="position:relative;height:200px;background:rgba(0,0,0,.3);border-radius:8px;padding:10px;width:100%;box-sizing:border-box">
+<canvas id="priceChart" style="width:100%;height:100%"></canvas>
 </div>
 </div>
 </section>
@@ -416,9 +416,12 @@ function drawKlineChart() {
   
   // 等待DOM渲染完成
   setTimeout(function() {
-    var w = canvas.parentElement.clientWidth - 20;
-    var h = 180;
+    // 获取父容器的宽度
+    var parent = canvas.parentElement;
+    var w = parent.offsetWidth - 20;
+    var h = parent.offsetHeight - 20;
     if (w <= 0) w = 300;
+    if (h <= 0) h = 160;
     canvas.width = w;
     canvas.height = h;
     ctx.clearRect(0, 0, w, h);
