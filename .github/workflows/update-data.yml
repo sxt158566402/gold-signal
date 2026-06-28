@@ -15,101 +15,74 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 << 'PYEOF'
+          cat > /tmp/update.py << 'PYEOF'
           import json, datetime, base64, urllib.request, os
-
           token = os.environ['GH_TOKEN']
-
-          # Fetch Binance ticker
-          try:
+          ticker = None
+          klines = []
+          # Try api1.binance.com
+          if not ticker:
+            try:
               req = urllib.request.Request("https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT")
               ticker = json.load(urllib.request.urlopen(req, timeout=15))
-              print(f"Ticker OK: {ticker['lastPrice']}")
-          except Exception as e:
-              print(f"Ticker failed: {e}")
+              print("Ticker from api1 OK")
+            except Exception as e:
+              print(f"api1 ticker failed: {e}")
+          # Try api.binance.com
+          if not ticker:
+            try:
+              req = urllib.request.Request("https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT")
+              ticker = json.load(urllib.request.urlopen(req, timeout=15))
+              print("Ticker from api OK")
+            except Exception as e:
+              print(f"api ticker failed: {e}")
+          # Try api2
+          if not ticker:
+            try:
+              req = urllib.request.Request("https://api2.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT")
+              ticker = json.load(urllib.request.urlopen(req, timeout=15))
+              print("Ticker from api2 OK")
+            except Exception as e:
+              print(f"api2 ticker failed: {e}")
+          if not ticker:
+            print("All Binance APIs failed, trying CoinGecko")
+            try:
+              req = urllib.request.Request("https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd&include_24hr_change=true")
+              cg = json.load(urllib.request.urlopen(req, timeout=15))
+              p = cg['pax-gold']['usd']
+              ticker = {'lastPrice': str(p), 'priceChangePercent': str(cg['pax-gold'].get('usd_24h_change', 0))}
+              print("Ticker from CoinGecko OK")
+            except Exception as e:
+              print(f"CoinGecko failed: {e}")
               exit(1)
-
-          # Fetch klines
-          try:
-              req = urllib.request.Request("https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=168")
+          # Klines - try multiple endpoints
+          for base in ["https://api1.binance.com", "https://api.binance.com", "https://api2.binance.com"]:
+            try:
+              req = urllib.request.Request(f"{base}/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=168")
               klines_raw = json.load(urllib.request.urlopen(req, timeout=15))
-              klines = []
-              for k in klines_raw:
-                  klines.append({
-                      "time": k[0] // 1000,
-                      "open": float(k[1]),
-                      "high": float(k[2]),
-                      "low": float(k[3]),
-                      "close": float(k[4]),
-                      "volume": float(k[5])
-                  })
-              print(f"Klines OK: {len(klines)} bars")
-          except Exception as e:
-              print(f"Klines failed: {e}")
-              klines = []
-
-          # Calc indicators
+              klines = [{"time": k[0]//1000, "open": float(k[1]), "high": float(k[2]), "low": float(k[3]), "close": float(k[4]), "volume": float(k[5])} for k in klines_raw]
+              print(f"Klines from {base} OK: {len(klines)} bars")
+              break
+            except Exception as e:
+              print(f"Klines from {base} failed: {e}")
           closes = [k["close"] for k in klines] if klines else [float(ticker["lastPrice"])]
-
           def ema(data, period):
-              if len(data) < period:
-                  return data[-1] if data else 0
-              k = 2 / (period + 1)
-              e = sum(data[:period]) / period
-              for v in data[period:]:
-                  e = v * k + e * (1 - k)
-              return e
-
-          ema7 = ema(closes, 7)
-          ema25 = ema(closes, 25)
+            if len(data) < period: return data[-1] if data else 0
+            k = 2 / (period + 1); e = sum(data[:period]) / period
+            for v in data[period:]: e = v * k + e * (1 - k)
+            return e
+          ema7 = ema(closes, 7); ema25 = ema(closes, 25)
           bbUpper = max(closes[-25:]) if len(closes) >= 25 else max(closes)
           bbLower = min(closes[-25:]) if len(closes) >= 25 else min(closes)
-          bbMiddle = (bbUpper + bbLower) / 2
-
-          price = float(ticker["lastPrice"])
-
-          data = {
-              "ticker": ticker,
-              "klines": klines,
-              "strategy": {
-                  "signal": "waiting",
-                  "price": price,
-                  "reason": "監控中",
-                  "indicators": {
-                      "rsi": 50,
-                      "ema7": round(ema7, 2),
-                      "ema25": round(ema25, 2),
-                      "bbUpper": round(bbUpper, 2),
-                      "bbMiddle": round(bbMiddle, 2),
-                      "bbLower": round(bbLower, 2)
-                  }
-              },
-              "timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
-          }
-
-          # Upload
+          bbMiddle = (bbUpper + bbLower) / 2; price = float(ticker["lastPrice"])
+          data = {"ticker": ticker, "klines": klines, "strategy": {"signal": "waiting", "price": price, "reason": "監控中", "indicators": {"rsi": 50, "ema7": round(ema7, 2), "ema25": round(ema25, 2), "bbUpper": round(bbUpper, 2), "bbMiddle": round(bbMiddle, 2), "bbLower": round(bbLower, 2)}}, "timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)}
           content = base64.b64encode(json.dumps(data, indent=2).encode()).decode()
-          req = urllib.request.Request(
-              "https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=gh-pages",
-              headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
-          )
+          req = urllib.request.Request("https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=gh-pages", headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"})
           sha = json.load(urllib.request.urlopen(req))["sha"]
-
-          body = {
-              "message": f"update {datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')}",
-              "content": content,
-              "sha": sha,
-              "branch": "gh-pages"
-          }
-          req2 = urllib.request.Request(
-              "https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json",
-              data=json.dumps(body).encode(),
-              headers={"Authorization": f"token {token}", "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json"},
-              method="PUT"
-          )
+          body = {"message": f"update {datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')}", "content": content, "sha": sha, "branch": "gh-pages"}
+          req2 = urllib.request.Request("https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json", data=json.dumps(body).encode(), headers={"Authorization": f"token {token}", "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json"}, method="PUT")
           r = json.load(urllib.request.urlopen(req2))
-          if "content" in r:
-              print(f"✅ PUSHED: price=${price} klines={len(klines)}")
-          else:
-              print(f"❌ ERROR: {r.get('message','?')}")
+          if "content" in r: print(f"PUSHED: price=${price} klines={len(klines)}")
+          else: print(f"ERROR: {r.get('message','?')}")
           PYEOF
+          python3 /tmp/update.py
