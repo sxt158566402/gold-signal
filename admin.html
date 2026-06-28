@@ -204,9 +204,9 @@ function alog(m,t){
 
 /* ===== GitHub API ===== */
 async function gh(method,file,body){
-  var url='https://api.github.com/repos/'+REPO+'/contents/'+file;
+  var url='https://api.github.com/repos/'+REPO+'/contents/'+file+'?ref=gh-pages';
   var opts={method:method,headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'}};
-  if(body)opts.body=JSON.stringify(body);
+  if(body){body.branch='gh-pages';opts.body=JSON.stringify(body);}
   var r=await fetch(url,opts);
   return r.json();
 }
@@ -214,19 +214,12 @@ async function gh(method,file,body){
 /* ===== 用户管理 ===== */
 async function loadUsers(){
   try{
-    var r=await fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'});
-    usersCache=await r.json();
-    renderUsers();
-  }catch(e){
-    // 可能文件不存在，尝试从 GitHub API 读
-    try{
-      var r=await gh('GET','data/users.json');
-      if(r.content){
-        usersCache=JSON.parse(decodeURIComponent(escape(atob(r.content))));
-        renderUsers();
-      }
-    }catch(e2){alog('載入用戶失敗','er');}
-  }
+    var r=await gh('GET','data/users.json');
+    if(r.content){
+      usersCache=JSON.parse(decodeURIComponent(escape(atob(r.content))));
+      renderUsers();
+    }
+  }catch(e){alog('載入用戶失敗','er');}
 }
 
 function renderUsers(){
@@ -309,6 +302,7 @@ async function addUser(){
   
   usersCache[email]={password:pw,expiry:expiry,created:now,note:note||''};
   
+  alog('正在開通 '+email+'...','ti');
   var ok=await pushUsers('開通用戶 '+email);
   if(ok){
     alog('✅ 用戶已開通: '+email,'ok');
@@ -317,6 +311,9 @@ async function addUser(){
     document.getElementById('newEmail').value='';
     document.getElementById('newNote').value='';
     renderUsers();
+  }else{
+    alog('❌ 開通失敗，請稍後重試','er');
+    alert('開通失敗！\n\n可能原因：\n1. 網絡連接問題\n2. GitHub API 限流\n\n請稍後重試');
   }
 }
 
@@ -343,16 +340,19 @@ async function delUser(email){
 }
 
 async function pushUsers(msg){
-  try{
-    var existing=await gh('GET','data/users.json');
-    var content=unescape(encodeURIComponent(JSON.stringify(usersCache,null,2)));
-    var body={message:msg+' '+new Date().toISOString().slice(11,19),content:btoa(content),branch:'gh-pages'};
-    if(existing.sha)body.sha=existing.sha;
-    var res=await gh('PUT','data/users.json',body);
-    if(res.commit)return true;
-    alog('推送失敗: '+res.message,'er');
-    return false;
-  }catch(e){alog('推送失敗: '+e.message,'er');return false;}
+  for(var retry=0;retry<3;retry++){
+    try{
+      var existing=await gh('GET','data/users.json');
+      var content=unescape(encodeURIComponent(JSON.stringify(usersCache,null,2)));
+      var body={message:msg+' '+new Date().toISOString().slice(11,19),content:btoa(content)};
+      if(existing.sha)body.sha=existing.sha;
+      var res=await gh('PUT','data/users.json',body);
+      if(res.commit)return true;
+      if(res.message&&res.message.indexOf('does not match')>-1){await new Promise(function(r){setTimeout(r,2000*(retry+1));});continue;}
+      alog('推送失敗: '+res.message,'er');return false;
+    }catch(e){if(retry<2){await new Promise(function(r){setTimeout(r,2000*(retry+1));});}else{alog('推送失敗: '+e.message,'er');return false;}}
+  }
+  return false;
 }
 
 /* ===== 系统状态 ===== */
@@ -404,7 +404,7 @@ async function forceRefresh(){
     else if(p<mn&&rsi<50){sig='short';why='跌破近10根K線低點+RSI偏空';}
     var data={ticker:tk,strategy:{signal:sig,price:p,reason:why,indicators:{rsi:+rsi.toFixed(2),ema7:+(cs.slice(-7).reduce(function(a,b){return a+b;})/7).toFixed(2),ema25:+(cs.slice(-25).reduce(function(a,b){return a+b;})/25).toFixed(2),bbUpper:+(m+2*sd).toFixed(2),bbMiddle:+m.toFixed(2),bbLower:+(m-2*sd).toFixed(2)}},timestamp:Date.now()};
     var existing=await gh('GET','data/data.json');
-    var body={message:'admin refresh',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)))),branch:'gh-pages'};
+    var body={message:'admin refresh',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))))};
     if(existing.sha)body.sha=existing.sha;
     var res=await gh('PUT','data/data.json',body);
     if(res.commit){alog('推送成功 $'+p.toFixed(2),'ok');loadStatus();}
