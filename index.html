@@ -410,71 +410,71 @@ function drawKlineChart() {
   var canvas = document.getElementById('priceChart');
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
+  
   // 等待DOM渲染完成
   setTimeout(function() {
     var w = canvas.parentElement.clientWidth - 20;
     var h = 180;
-    if (w <= 0) w = 300; // 默认宽度
+    if (w <= 0) w = 300;
     canvas.width = w;
     canvas.height = h;
-  ctx.clearRect(0, 0, w, h);
-  if (chartData.length === 0) return;
-  
-  // 计算价格范围
-  var allPrices = [];
-  chartData.forEach(function(d) {
-    allPrices.push(d.high, d.low);
-  });
-  var min = Math.min.apply(null, allPrices) * 0.998;
-  var max = Math.max.apply(null, allPrices) * 1.002;
-  var range = max - min;
-  
-  // 画网格线
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.lineWidth = 1;
-  for (var i = 0; i < 5; i++) {
-    var y = (h / 5) * i + 10;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-    var price = max - (range / 5) * i;
-    ctx.fillStyle = '#888';
-    ctx.font = '10px Arial';
-    ctx.fillText(price.toFixed(0), 2, y - 2);
-  }
-  
-  // 画K线
-  var kWidth = Math.max(4, (w / chartData.length) * 0.6);
-  var gap = w / chartData.length;
-  
-  for (var i = 0; i < chartData.length; i++) {
-    var d = chartData[i];
-    var x = gap * i + gap / 2;
-    var isUp = d.close >= d.open;
-    var color = isUp ? '#2ed573' : '#ff4757';
+    ctx.clearRect(0, 0, w, h);
+    if (chartData.length === 0) return;
     
-    // 计算坐标
-    var openY = h - ((d.open - min) / range) * (h - 20) - 10;
-    var closeY = h - ((d.close - min) / range) * (h - 20) - 10;
-    var highY = h - ((d.high - min) / range) * (h - 20) - 10;
-    var lowY = h - ((d.low - min) / range) * (h - 20) - 10;
+    // 计算价格范围
+    var allPrices = [];
+    chartData.forEach(function(d) {
+      allPrices.push(d.high, d.low);
+    });
+    var min = Math.min.apply(null, allPrices) * 0.998;
+    var max = Math.max.apply(null, allPrices) * 1.002;
+    var range = max - min;
     
-    // 画影线（上下影线）
-    ctx.beginPath();
-    ctx.strokeStyle = color;
+    // 画网格线
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
     ctx.lineWidth = 1;
-    ctx.moveTo(x, highY);
-    ctx.lineTo(x, lowY);
-    ctx.stroke();
+    for (var i = 0; i < 5; i++) {
+      var y = (h / 5) * i + 10;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+      var price = max - (range / 5) * i;
+      ctx.fillStyle = '#888';
+      ctx.font = '10px Arial';
+      ctx.fillText(price.toFixed(0), 2, y - 2);
+    }
     
-    // 画实体
-    var bodyTop = Math.min(openY, closeY);
-    var bodyHeight = Math.abs(closeY - openY) || 1;
-    ctx.fillStyle = color;
-    ctx.fillRect(x - kWidth / 2, bodyTop, kWidth, bodyHeight);
-  }
-  }, 100); // end setTimeout
+    // 画K线
+    var kWidth = Math.max(4, (w / chartData.length) * 0.6);
+    var gap = w / chartData.length;
+    
+    for (var i = 0; i < chartData.length; i++) {
+      var d = chartData[i];
+      var x = gap * i + gap / 2;
+      var isUp = d.close >= d.open;
+      var color = isUp ? '#2ed573' : '#ff4757';
+      
+      var openY = h - ((d.open - min) / range) * (h - 20) - 10;
+      var closeY = h - ((d.close - min) / range) * (h - 20) - 10;
+      var highY = h - ((d.high - min) / range) * (h - 20) - 10;
+      var lowY = h - ((d.low - min) / range) * (h - 20) - 10;
+      
+      // 画影线
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.moveTo(x, highY);
+      ctx.lineTo(x, lowY);
+      ctx.stroke();
+      
+      // 画实体
+      var bodyTop = Math.min(openY, closeY);
+      var bodyHeight = Math.abs(closeY - openY) || 1;
+      ctx.fillStyle = color;
+      ctx.fillRect(x - kWidth / 2, bodyTop, kWidth, bodyHeight);
+    }
+  }, 100);
 }
 
 /* ===== 仓位计算器 ===== */
