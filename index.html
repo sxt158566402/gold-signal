@@ -313,39 +313,41 @@ function startApp(){
   checkRiskAlerts(); // 检查风险提醒
 }
 
-/* ===== 风险提醒：每周五 + 经济数据 ===== */
+/* ===== 风险提醒：周五晚上 + 经济数据 ===== */
 var isRiskDay = false; // 全局变量，控制喇叭是否静音
 
-function checkRiskAlerts(){
+async function checkRiskAlerts(){
   var now = new Date();
   var risks = [];
   isRiskDay = false; // 重置
   
-  // 每周五都显示风险提醒
-  if(now.getDay() === 5){
+  // 周五晚上 20:00-24:00 风险提醒
+  if(now.getDay() === 5 && now.getHours() >= 20){
     risks.push('🖤 <b>黑色星期五</b>：今晚波动极大，建议观望或轻仓！');
     isRiskDay = true;
   }
   
-  // 检测重要经济数据
-  var dayOfMonth = now.getDate();
-  
-  // 非农：每月第一个周五
-  if(dayOfMonth <= 7 && now.getDay() === 5){
-    risks.push('📊 <b>非农就业数据（NFP）</b>：今晚20:30公布，金价可能剧烈波动！');
-    isRiskDay = true;
-  }
-  
-  // CPI：每月10-15号
-  if(dayOfMonth >= 10 && dayOfMonth <= 15){
-    risks.push('📊 <b>CPI通胀数据</b>：近期公布，注意金价波动！');
-    isRiskDay = true;
-  }
-  
-  // 美联储利率决议：每月中旬（简化判断）
-  if(dayOfMonth >= 15 && dayOfMonth <= 21){
-    risks.push('📊 <b>美联储利率决议</b>：近期公布，注意金价波动！');
-    isRiskDay = true;
+  // 自动获取经济数据（从免费API）
+  try {
+    var resp = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json');
+    var events = await resp.json();
+    
+    // 筛选今天或明天的高影响经济数据
+    var today = now.toISOString().split('T')[0];
+    var tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+    
+    events.forEach(function(evt){
+      if(evt.impact === 'High' && (evt.date.startsWith(today) || evt.date.startsWith(tomorrow))){
+        // 只显示影响黄金的国家（USD、EUR、GBP、CNY）
+        if(['USD','EUR','GBP','CNY'].includes(evt.country)){
+          var countryFlag = {'USD':'🇺🇸','EUR':'🇪🇺','GBP':'🇬🇧','CNY':'🇨🇳'}[evt.country] || '';
+          risks.push(countryFlag + ' <b>' + evt.title + '</b>（' + evt.country + '）：重大经济数据，金价可能剧烈波动！');
+          isRiskDay = true;
+        }
+      }
+    });
+  } catch(e) {
+    console.error('获取经济数据失败:', e);
   }
   
   // 如果有风险，显示提醒
