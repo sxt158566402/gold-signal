@@ -1,0 +1,66 @@
+name: Update Data
+on:
+  schedule:
+    - cron: '*/1 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Fetch data and generate JSON
+        run: |
+          python3 -c "
+          import json, urllib.request, datetime, os
+          
+          print('Fetching from Binance...')
+          t = json.loads(urllib.request.urlopen('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT', timeout=15).read())
+          k = json.loads(urllib.request.urlopen('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50', timeout=15).read())
+          
+          c = [float(x[4]) for x in k]
+          h = [float(x[2]) for x in k]
+          l = [float(x[3]) for x in k]
+          
+          g,ls2=0,0
+          for i in range(len(c)-14,len(c)):
+              d=c[i]-c[i-1]
+              if d>0:g+=d
+              else:ls2-=d
+          r=100-(100/(1+g/ls2)) if ls2>0 else 50
+          
+          s2=c[-20:]
+          m=sum(s2)/20
+          sd=(sum((x-m)**2 for x in s2)/20)**0.5
+          
+          p=float(t['lastPrice'])
+          rh,rl=h[-10:],l[-10:]
+          sig='waiting'
+          why='監控中'
+          if p>max(rh)and r>50:sig='long';why='突破近10根K線高點+RSI偏多'
+          elif p<min(rl)and r<50:sig='short';why='跌破近10根K線低點+RSI偏空'
+          
+          d={'ticker':t,'strategy':{'signal':sig,'price':p,'reason':why,'indicators':{'rsi':round(r,2),'ema7':round(sum(c[-7:])/7,2),'ema25':round(sum(c[-25:])/25,2),'bbUpper':round(m+2*sd,2),'bbMiddle':round(m,2),'bbLower':round(m-2*sd,2)}},'timestamp':int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)}
+          
+          os.makedirs('data',exist_ok=True)
+          with open('data/data.json','w') as f:json.dump(d,f,indent=2)
+          print('Price:',p,'RSI:',round(r,2))
+          "
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/data.json
+          if ! git diff --cached --quiet; then
+            git commit -m "update $(date -u +%H:%M:%S)"
+            git push
+          else
+            echo "No changes"
+          fi
