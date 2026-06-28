@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GoldSniper Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-height:100vh;padding:16px}
+.bar{background:#12121a;border:1px solid #2a2a35;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.bar .logo{font-weight:700;color:#FFD700;font-size:16px}
+.bar .badge{font-size:12px;padding:4px 10px;border-radius:20px;background:#2a2a35;color:#888}
+.card{background:#12121a;border:1px solid #2a2a35;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#FFD700;font-size:14px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.row:last-child{border:none}
+.row .l{color:#888}
+.row .v{font-weight:700}
+.up{color:#2ed573}.down{color:#ff4757}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.btn.gold{background:linear-gradient(135deg,#FFD700,#b8960f);color:#000}
+.btn.red{background:#ff4757;color:#fff}
+.log{background:#0a0a0f;border:1px solid #2a2a35;border-radius:8px;padding:12px;font-size:12px;color:#888;max-height:200px;overflow-y:auto;font-family:monospace}
+.log .ok{color:#2ed573}.log .er{color:#ff4757}.log .ti{color:#666}
+#login{max-width:400px;margin:80px auto;text-align:center}
+#login h2{color:#FFD700;margin-bottom:8px}
+#login p{color:#888;font-size:13px;margin-bottom:20px}
+#login input{width:100%;padding:14px;border:1px solid #2a2a35;border-radius:10px;background:#12121a;color:#e8e8f0;font-size:15px;text-align:center;margin-bottom:12px}
+#login .err{color:#ff4757;font-size:12px;margin-bottom:8px}
+#main{display:none;max-width:500px;margin:0 auto}
+</style>
+</head>
+<body>
+<div id="login">
+<h2>GoldSniper</h2>
+<p>管理後台</p>
+<input type="password" id="pw" placeholder="管理員密碼" onkeydown="if(event.key==='Enter')doLogin()">
+<input type="text" id="tk" placeholder="GitHub Token" onkeydown="if(event.key==='Enter')doLogin()">
+<div class="err" id="lerr"></div>
+<button class="btn gold" onclick="doLogin()">登入</button>
+</div>
+<div id="main">
+<div class="bar"><div class="logo">Admin</div><div class="badge" id="status">載入中...</div></div>
+<div class="card">
+<h3>即時數據</h3>
+<div class="row"><span class="l">PAXG 價格</span><span class="v" id="price">--</span></div>
+<div class="row"><span class="l">RSI(14)</span><span class="v" id="rsi">--</span></div>
+<div class="row"><span class="l">信號</span><span class="v" id="signal">--</span></div>
+<div class="row"><span class="l">數據時間</span><span class="v" id="dtime">--</span></div>
+<div class="row"><span class="l">數據年齡</span><span class="v" id="age">--</span></div>
+</div>
+<div class="card">
+<h3>操作</h3>
+<button class="btn gold" onclick="refreshData()">強制刷新數據</button>
+</div>
+<div class="card">
+<h3>操作日誌</h3>
+<div class="log" id="log"></div>
+</div>
+</div>
+<script>
+var REPO='sxt158566402/gold-signal';
+var PASS='sxt15866';
+var TOKEN='';
+function doLogin(){var tk=document.getElementById('tk').value.trim();var pw=document.getElementById('pw').value;if(pw!==PASS){document.getElementById('lerr').textContent='密碼錯誤';return;}if(!tk){document.getElementById('lerr').textContent='請輸入Token';return;}TOKEN=tk;document.getElementById('login').style.display='none';document.getElementById('main').style.display='block';log('登入成功','ok');loadData();setInterval(loadData,10000);}
+function log(m,t){var e=document.getElementById('log');var n=new Date().toLocaleTimeString('zh-CN');e.innerHTML='<div><span class="ti">['+n+']</span> <span class="'+t+'">'+m+'</span></div>'+e.innerHTML;}
+async function loadData(){try{var r=await fetch('data/data.json?t='+Date.now(),{cache:'no-store'});var d=await r.json();var p=d.strategy.price;var age=Math.floor((Date.now()-d.timestamp)/1000);document.getElementById('price').textContent='$'+parseFloat(p).toFixed(2);document.getElementById('rsi').textContent=d.strategy.indicators.rsi;var sig=d.strategy.signal;var se=document.getElementById('signal');if(sig==='long'){se.textContent='做多';se.className='v up';}else if(sig==='short'){se.textContent='做空';se.className='v down';}else{se.textContent='等待';se.className='v';}document.getElementById('dtime').textContent=new Date(d.timestamp).toLocaleString('zh-CN');var ae=document.getElementById('age');ae.textContent=age+'秒前';ae.className=age>180?'v down':age>90?'v':'v up';var st=document.getElementById('status');if(age>180){st.textContent='掉線';st.style.color='#ff4757';}else if(age>90){st.textContent='延遲';st.style.color='#ffa502';}else{st.textContent='正常';st.style.color='#2ed573';}}catch(e){log('載入失敗','er');}}
+async function apiCall(m,b){var r=await fetch('https://api.github.com/repos/'+REPO+'/contents/data/data.json',{method:m,headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},body:b?JSON.stringify(b):undefined});return r.json();}
+async function pushData(d){var c=await apiCall('GET');var ct=unescape(encodeURIComponent(JSON.stringify(d,null,2)));return await apiCall('PUT',{message:'admin update',content:btoa(ct),sha:c.sha,branch:'gh-pages'});}
+async function refreshData(){log('獲取最新數據...','ti');try{var r1=await fetch('https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');var tk=await r1.json();var r2=await fetch('https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50');var kl=await r2.json();var cs=kl.map(function(k){return parseFloat(k[4]);});var hs=kl.map(function(k){return parseFloat(k[2]);});var ls=kl.map(function(k){return parseFloat(k[3]);});var g=0,ls2=0;for(var i=cs.length-14;i<cs.length;i++){var dd=cs[i]-cs[i-1];if(dd>0)g+=dd;else ls2-=dd;}var rsi=ls2>0?100-(100/(1+g/ls2)):50;var s20=cs.slice(-20);var m=s20.reduce(function(a,b){return a+b;})/20;var sd=Math.sqrt(s20.reduce(function(a,x){return a+Math.pow(x-m,2);},0)/20);var p=parseFloat(tk.lastPrice);var rh=hs.slice(-10),rl=ls.slice(-10);var mx=Math.max.apply(null,rh),mn=Math.min.apply(null,rl);var sig='waiting',why='監控中';if(p>mx&&rsi>50){sig='long';why='突破';}else if(p<mn&&rsi<50){sig='short';why='跌破';}var data={ticker:tk,strategy:{signal:sig,price:p,reason:why,indicators:{rsi:+rsi.toFixed(2),ema7:+(cs.slice(-7).reduce(function(a,b){return a+b;})/7).toFixed(2),ema25:+(cs.slice(-25).reduce(function(a,b){return a+b;})/25).toFixed(2),bbUpper:+(m+2*sd).toFixed(2),bbMiddle:+m.toFixed(2),bbLower:+(m-2*sd).toFixed(2)}},timestamp:Date.now()};var res=await pushData(data);if(res.commit){log('推送成功 $'+p,'ok');}else{log('失敗: '+res.message,'er');}loadData();}catch(e){log('失敗: '+e.message,'er');}}
+</script>
+</body>
+</html>
