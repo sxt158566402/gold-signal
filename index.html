@@ -299,8 +299,8 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div style="font-size:11px;color:#888">PAXG/USDT 近30天</div>
 </div>
 <div style="margin-left:auto;display:flex;gap:6px">
-<button onclick="loadChart('7d')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.2);border:1px solid rgba(30,144,255,.4);border-radius:4px;color:#1e90ff;cursor:pointer">7天</button>
-<button onclick="loadChart('30d')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.4);border:1px solid rgba(30,144,255,.6);border-radius:4px;color:#fff;cursor:pointer">30天</button>
+<button onclick="loadChart('1h')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.4);border:1px solid rgba(30,144,255,.6);border-radius:4px;color:#fff;cursor:pointer">1小时</button>
+<button onclick="loadChart('4h')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.2);border:1px solid rgba(30,144,255,.4);border-radius:4px;color:#1e90ff;cursor:pointer">4小时</button>
 </div>
 </div>
 <div style="position:relative;height:200px;background:rgba(0,0,0,.3);border-radius:8px;padding:10px">
@@ -384,14 +384,16 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 /* ===== 金价K线图 ===== */
 var chartData = [];
 
-async function loadChart(days) {
+async function loadChart(period) {
   try {
-    var limit = days === '7d' ? 7 : 30;
-    var r = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1d&limit=' + limit, {cache: 'no-store'});
+    // period: '1h'=1小时K线24根, '4h'=4小时K线30根
+    var interval = period === '1h' ? '1h' : '4h';
+    var limit = period === '1h' ? 24 : 30;
+    var r = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=' + interval + '&limit=' + limit, {cache: 'no-store'});
     var data = await r.json();
     chartData = data.map(function(k) {
       return {
-        time: new Date(k[0]).toLocaleDateString('zh-CN', {month: 'short', day: 'numeric'}),
+        time: new Date(k[0]).toLocaleString('zh-CN', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}),
         open: parseFloat(k[1]),
         high: parseFloat(k[2]),
         low: parseFloat(k[3]),
@@ -558,7 +560,7 @@ function updateStats() {
 }
 
 // 初始化加载
-loadChart('30d');
+loadChart('1h');
 updateStats();
 
 /* ===== 用户登录验证 ===== */
@@ -586,7 +588,7 @@ async function doUserLogin(){
     document.getElementById('mainContent').classList.add('authed');
     startApp();
     // 登录后加载图表和统计
-    setTimeout(function() { loadChart('30d'); updateStats(); }, 500);
+    setTimeout(function() { loadChart('1h'); updateStats(); }, 500);
   }catch(e){err.textContent='網路錯誤，請重試';}
 }
 
@@ -595,7 +597,7 @@ function checkLogin(){
     document.getElementById('loginOverlay').style.display='none';
     document.getElementById('mainContent').classList.add('authed');
     // 已登录用户，加载图表和统计
-    setTimeout(function() { loadChart('30d'); updateStats(); }, 500);
+    setTimeout(function() { loadChart('1h'); updateStats(); }, 500);
     // 验证 token 有效性
     var email=currentUser;
     var pw=localStorage.getItem('gs_user_pw')||'';
