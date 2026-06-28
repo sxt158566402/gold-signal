@@ -3,24 +3,24 @@
     "symbol": "PAXGUSDT",
     "priceChange": "-1.24000000",
     "priceChangePercent": "-0.030",
-    "weightedAvgPrice": "4075.98623842",
-    "prevClosePrice": "4075.43000000",
+    "weightedAvgPrice": "4075.98243697",
+    "prevClosePrice": "4075.42000000",
     "lastPrice": "4074.19000000",
-    "lastQty": "0.65520000",
+    "lastQty": "0.26720000",
     "bidPrice": "4074.19000000",
-    "bidQty": "2.89110000",
+    "bidQty": "1.75090000",
     "askPrice": "4074.20000000",
-    "askQty": "0.34120000",
+    "askQty": "0.09730000",
     "openPrice": "4075.43000000",
     "highPrice": "4081.03000000",
     "lowPrice": "4070.89000000",
-    "volume": "743.82050000",
-    "quoteVolume": "3031802.12185100",
-    "openTime": 1782581273037,
-    "closeTime": 1782667673037,
-    "firstId": 48635250,
-    "lastId": 48653158,
-    "count": 17909
+    "volume": "745.23970000",
+    "quoteVolume": "3037583.92853200",
+    "openTime": 1782581328776,
+    "closeTime": 1782667728776,
+    "firstId": 48635290,
+    "lastId": 48653196,
+    "count": 17907
   },
   "strategy": {
     "signal": "waiting",
@@ -35,5 +35,5 @@
       "bbLower": 4072.74
     }
   },
-  "timestamp": 1782667676385
+  "timestamp": 1782667731361
 }
