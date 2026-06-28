@@ -264,6 +264,7 @@ function renderUsers(){
     html+='<div class="user-item">';
     html+='<div class="uhd"><span class="email">'+email+'</span>'+statusBadge+'</div>';
     html+='<div class="meta">';
+    html+='<span>密碼: <b style="color:#FFD700;cursor:pointer" onclick="navigator.clipboard.writeText(\''+u.password+'\');this.textContent=\'已複製\'">'+u.password+'</b></span>';
     html+='<span>到期: '+expText+'</span>';
     html+='<span>開通: '+created+'</span>';
     if(u.note)html+='<span>備註: '+u.note+'</span>';
