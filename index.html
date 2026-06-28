@@ -117,6 +117,11 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div class="card long hid" id="ls"><div class="hd"><span class="badge long">📈 做多</span><span id="lt"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="le">--</span></div><div class="row"><span class="l">止損 (-10)</span><span class="v sl" id="lsl">--</span></div><div class="row"><span class="l">止盈 (+10)</span><span class="v tp" id="ltp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="lr"></div></div>
 <div class="card short hid" id="ss"><div class="hd"><span class="badge short">📉 做空</span><span id="st"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="se">--</span></div><div class="row"><span class="l">止損 (+10)</span><span class="v sl" id="ssl">--</span></div><div class="row"><span class="l">止盈 (-10)</span><span class="v tp" id="stp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="sr"></div></div>
 </section>
+<!-- 风险提醒区域 -->
+<div id="riskAlert" style="display:none;margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(255,71,87,.15),rgba(255,71,87,.05));border:1px solid rgba(255,71,87,.3);border-radius:10px;">
+<div style="font-size:14px;font-weight:700;color:#ff4757;margin-bottom:8px">⚠️ 高风险提醒</div>
+<div id="riskContent" style="font-size:13px;color:#e8e8f0;line-height:1.6"></div>
+</div>
 <div style="margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(255,215,0,.12),rgba(255,215,0,.04));border:1px solid rgba(255,215,0,.3);border-radius:10px;text-align:center">
 <div style="font-size:14px;font-weight:700;color:#FFD700;margin-bottom:6px">⚠️ 風控提醒</div>
 <div style="font-size:13px;color:#e8e8f0;line-height:1.6">
@@ -301,6 +306,59 @@ try{
 function startApp(){
   load();
   setInterval(load, 30000);
+  checkRiskAlerts(); // 检查风险提醒
+}
+
+/* ===== 风险提醒：黑色星期五 + 经济数据 ===== */
+function checkRiskAlerts(){
+  var now = new Date();
+  var risks = [];
+  
+  // 检测黑色星期五（每月第三个周五）
+  var year = now.getFullYear();
+  var month = now.getMonth();
+  // 找到本月所有周五
+  var fridays = [];
+  for(var d=1; d<=31; d++){
+    var dt = new Date(year, month, d);
+    if(dt.getMonth() === month && dt.getDay() === 5){
+      fridays.push(dt);
+    }
+  }
+  // 第三个周五是黑色星期五
+  if(fridays.length >= 3){
+    var blackFriday = fridays[2];
+    var diffMs = now - blackFriday;
+    var diffDays = diffMs / (1000*60*60*24);
+    // 当天或前后1天都显示警告
+    if(Math.abs(diffDays) <= 1){
+      risks.push('🖤 <b>黑色星期五</b>：今晚波动极大，建议观望或轻仓！');
+    }
+  }
+  
+  // 检测重要经济数据（简化版：每月固定日期）
+  var dayOfMonth = now.getDate();
+  var hour = now.getHours();
+  
+  // 非农：每月第一个周五
+  if(dayOfMonth <= 7 && now.getDay() === 5){
+    risks.push('📊 <b>非农就业数据（NFP）</b>：今晚20:30公布，金价可能剧烈波动！');
+  }
+  
+  // CPI：每月10-15号
+  if(dayOfMonth >= 10 && dayOfMonth <= 15){
+    risks.push('📊 <b>CPI通胀数据</b>：近期公布，注意金价波动！');
+  }
+  
+  // 如果有风险，显示提醒
+  var riskDiv = document.getElementById('riskAlert');
+  var riskContent = document.getElementById('riskContent');
+  if(risks.length > 0){
+    riskDiv.style.display = 'block';
+    riskContent.innerHTML = risks.join('<br>');
+  } else {
+    riskDiv.style.display = 'none';
+  }
 }
 
 checkLogin();
