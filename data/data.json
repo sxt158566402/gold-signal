@@ -1,11 +1,11 @@
 {
-  "ticker": {"lastPrice": "4051.31"},
+  "ticker": {"lastPrice": "4052.18"},
   "klines": [],
   "strategy": {
     "signal": "waiting",
-    "price": 4051.31,
+    "price": 4052.18,
     "reason": "監控中",
-    "indicators": {"rsi": 50, "ema7": 4051.31, "ema25": 4051.31, "bbUpper": 4051.31, "bbMiddle": 4051.31, "bbLower": 4051.31}
+    "indicators": {"rsi": 50, "ema7": 4052.18, "ema25": 4052.18, "bbUpper": 4052.18, "bbMiddle": 4052.18, "bbLower": 4052.18}
   },
-  "timestamp": 1782686636000
+  "timestamp": 1782686757000
 }
