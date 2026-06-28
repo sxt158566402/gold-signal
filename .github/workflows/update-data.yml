@@ -17,7 +17,7 @@ jobs:
         run: |
           # Try Binance first, then CoinGecko
           if curl -sf --max-time 10 "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/t.json && \
-             curl -sf --max-time 10 "https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50" > /tmp/k.json; then
+             curl -sf --max-time 10 "https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=50" > /tmp/k.json; then
             SOURCE=binance
           elif curl -sf --max-time 10 "https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd" > /tmp/cg.json; then
             SOURCE=coingecko
