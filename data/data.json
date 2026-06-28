@@ -1,26 +1,26 @@
 {
   "ticker": {
     "symbol": "PAXGUSDT",
-    "priceChange": "-14.58000000",
-    "priceChangePercent": "-0.358",
-    "weightedAvgPrice": "4073.07172739",
-    "prevClosePrice": "4074.76000000",
-    "lastPrice": "4060.17000000",
+    "priceChange": "-15.06000000",
+    "priceChangePercent": "-0.370",
+    "weightedAvgPrice": "4073.06909430",
+    "prevClosePrice": "4074.75000000",
+    "lastPrice": "4059.70000000",
     "lastQty": "0.24660000",
-    "bidPrice": "4059.82000000",
-    "bidQty": "0.27680000",
-    "askPrice": "4059.83000000",
-    "askQty": "1.42950000",
-    "openPrice": "4074.75000000",
+    "bidPrice": "4059.19000000",
+    "bidQty": "0.33380000",
+    "askPrice": "4059.20000000",
+    "askQty": "4.91470000",
+    "openPrice": "4074.76000000",
     "highPrice": "4081.64000000",
     "lowPrice": "4048.60000000",
-    "volume": "1362.45720000",
-    "quoteVolume": "5549385.90110200",
-    "openTime": 1782604088896,
-    "closeTime": 1782690488896,
-    "firstId": 48638570,
-    "lastId": 48665448,
-    "count": 26879
+    "volume": "1362.62770000",
+    "quoteVolume": "5550076.77191000",
+    "openTime": 1782604114913,
+    "closeTime": 1782690514913,
+    "firstId": 48638571,
+    "lastId": 48665451,
+    "count": 26881
   },
   "klines": [
     [
@@ -714,11 +714,11 @@
       "4059.30000000",
       "4061.46000000",
       "4059.22000000",
-      "4060.17000000",
-      "3.73650000",
+      "4059.70000000",
+      "3.99400000",
       1782690599999,
-      "15172.93109700",
-      62,
+      "16218.30515500",
+      65,
       "1.07910000",
       "4381.30261000",
       "0"
@@ -726,16 +726,16 @@
   ],
   "strategy": {
     "signal": "waiting",
-    "price": 4060.17,
+    "price": 4059.7,
     "reason": "\u76d1\u63a7\u4e2d",
     "indicators": {
-      "rsi": 52.92,
-      "ema7": 4056.24,
-      "ema25": 4061.93,
-      "bbUpper": 4067.22,
-      "bbMiddle": 4058.94,
-      "bbLower": 4050.66
+      "rsi": 52.35,
+      "ema7": 4056.17,
+      "ema25": 4061.91,
+      "bbUpper": 4067.19,
+      "bbMiddle": 4058.92,
+      "bbLower": 4050.65
     }
   },
-  "timestamp": 1782690490007
+  "timestamp": 1782690515366
 }
