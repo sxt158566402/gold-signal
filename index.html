@@ -4,6 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>GoldSniper</title>
+<!-- 用户登录覆盖层 -->
+<style>
+#loginOverlay{position:fixed;inset:0;background:#0a0a0f;z-index:999;display:flex;align-items:center;justify-content:center}
+#loginOverlay .box{text-align:center;padding:40px 30px;max-width:380px;width:90%}
+#loginOverlay .logo{font-size:40px;margin-bottom:8px}
+#loginOverlay h2{color:#FFD700;font-size:22px;margin-bottom:4px}
+#loginOverlay p{color:#888;font-size:13px;margin-bottom:24px}
+#loginOverlay .field{width:100%;padding:14px;border:1px solid #2a2a35;border-radius:10px;background:#12121a;color:#e8e8f0;font-size:15px;text-align:center;margin-bottom:12px;outline:none}
+#loginOverlay .field:focus{border-color:#FFD700}
+#loginOverlay .errmsg{color:#ff4757;font-size:12px;margin-bottom:8px;min-height:16px}
+#loginOverlay .lbtn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#FFD700,#b8960f);color:#000}
+#loginOverlay .lbtn:active{opacity:.8}
+#loginOverlay .expire-note{margin-top:16px;font-size:11px;color:#555}
+#mainContent{display:none}
+.authed{display:block!important}
+</style>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-height:100vh}
@@ -62,6 +78,21 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 </style>
 </head>
 <body>
+<!-- 登录层 -->
+<div id="loginOverlay">
+<div class="box">
+<div class="logo">⚡</div>
+<h2>GoldSniper</h2>
+<p>PAXG 黃金信號系統</p>
+<input type="email" class="field" id="uEmail" placeholder="郵箱">
+<input type="password" class="field" id="uPw" placeholder="密碼" onkeydown="if(event.key==='Enter')doUserLogin()">
+<div class="errmsg" id="uErr"></div>
+<button class="lbtn" onclick="doUserLogin()">登入</button>
+<div class="expire-note">需要帳號請聯繫管理員開通</div>
+</div>
+</div>
+<!-- 主内容 -->
+<div id="mainContent">
 <div class="ap" id="ap"><div class="api">
 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
 <p style="font-size:18px;font-weight:700">點擊啟用語音提醒</p>
@@ -98,6 +129,63 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 </div>
 </section>
 <script>
+/* ===== 用户登录验证 ===== */
+var REPO='sxt158566402/gold-signal';
+var currentUser=localStorage.getItem('gs_user');
+
+async function doUserLogin(){
+  var email=document.getElementById('uEmail').value.trim().toLowerCase();
+  var pw=document.getElementById('uPw').value;
+  var err=document.getElementById('uErr');
+  if(!email||!email.includes('@')){err.textContent='請輸入有效郵箱';return;}
+  if(!pw){err.textContent='請輸入密碼';return;}
+  err.textContent='驗證中...';
+  try{
+    var r=await fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'});
+    var users=await r.json();
+    var u=users[email];
+    if(!u){err.textContent='帳號不存在，請聯繫管理員';return;}
+    if(u.password!==pw){err.textContent='密碼錯誤';return;}
+    if(u.expiry!==0&&u.expiry<Date.now()){err.textContent='帳號已過期，請聯繫管理員續期';return;}
+    // 登录成功
+    localStorage.setItem('gs_user',email);
+    localStorage.setItem('gs_user_pw',pw);
+    document.getElementById('loginOverlay').style.display='none';
+    document.getElementById('mainContent').classList.add('authed');
+    startApp();
+  }catch(e){err.textContent='網路錯誤，請重試';}
+}
+
+function checkLogin(){
+  if(currentUser){
+    document.getElementById('loginOverlay').style.display='none';
+    document.getElementById('mainContent').classList.add('authed');
+    // 验证 token 有效性
+    var email=currentUser;
+    var pw=localStorage.getItem('gs_user_pw')||'';
+    fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'})
+      .then(function(r){return r.json();})
+      .then(function(users){
+        var u=users[email];
+        if(!u||u.password!==pw||(u.expiry!==0&&u.expiry<Date.now())){
+          // 过期或密码改了
+          localStorage.removeItem('gs_user');
+            localStorage.removeItem('gs_user_pw');
+          document.getElementById('mainContent').classList.remove('authed');
+          document.getElementById('loginOverlay').style.display='flex';
+          document.getElementById('uErr').textContent='帳號已過期或密碼已更改';
+        }
+      }).catch(function(){});
+    startApp();
+  }
+}
+function doLogoutUser(){
+  localStorage.removeItem('gs_user');
+  localStorage.removeItem('gs_user_pw');
+  currentUser=null;
+  location.reload();
+}
+
 var ae=false,sy=window.speechSynthesis;
 function sp(t){if(!ae||!sy)return;sy.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';u.rate=0.9;var v=sy.getVoices();for(var i=0;i<v.length;i++){if(v[i].lang.indexOf('zh')>=0){u.voice=v[i];break;}}sy.speak(t);}
 function vb(){if(navigator.vibrate)navigator.vibrate([200,100,200]);}
@@ -202,8 +290,13 @@ try{
   sc(false, '斷線-重試中...');
 }
 }
-load();
-setInterval(load, 30000);
+function startApp(){
+  load();
+  setInterval(load, 30000);
+}
+
+checkLogin();
 </script>
+</div>
 </body>
 </html>
