@@ -15,42 +15,66 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Fetch ticker
-        run: curl -sf "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/ticker.json
-
-      - name: Fetch klines
-        run: curl -sf "https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50" > /tmp/klines.json
+      - name: Fetch PAXG data
+        run: |
+          # Try multiple APIs with fallbacks
+          if curl -sf --max-time 10 "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/ticker.json; then
+            curl -sf --max-time 10 "https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50" > /tmp/klines.json
+            echo "SOURCE=binance" >> $GITHUB_ENV
+          elif curl -sf --max-time 10 "https://api.coingecko.com/api/v3/coins/pax-gold/market_chart?vs_currency=usd&days=1" > /tmp/cg.json; then
+            echo "SOURCE=coingecko" >> $GITHUB_ENV
+          else
+            echo "All APIs blocked, skipping"
+            exit 0
+          fi
 
       - name: Build data.json
         run: |
-          python3 << 'EOF'
-          import json, datetime, os
-          t = json.load(open('/tmp/ticker.json'))
-          k = json.load(open('/tmp/klines.json'))
-          c = [float(x[4]) for x in k]
-          h = [float(x[2]) for x in k]
-          l = [float(x[3]) for x in k]
-          g, ls2 = 0, 0
-          for i in range(len(c)-14, len(c)):
-              d = c[i] - c[i-1]
-              if d > 0: g += d
-              else: ls2 -= d
-          r = 100 - (100/(1+g/ls2)) if ls2 > 0 else 50
-          s2 = c[-20:]
-          m = sum(s2)/20
-          sd = (sum((x-m)**2 for x in s2)/20)**0.5
-          p = float(t['lastPrice'])
-          rh, rl = h[-10:], l[-10:]
-          sig, why = 'waiting', '監控中'
-          if p > max(rh) and r > 50: sig, why = 'long', '突破近10根K線高點+RSI偏多'
-          elif p < min(rl) and r < 50: sig, why = 'short', '跌破近10根K線低點+RSI偏空'
-          data = {'ticker': t, 'strategy': {'signal': sig, 'price': p, 'reason': why, 'indicators': {'rsi': round(r,2), 'ema7': round(sum(c[-7:])/7,2), 'ema25': round(sum(c[-25:])/25,2), 'bbUpper': round(m+2*sd,2), 'bbMiddle': round(m,2), 'bbLower': round(m-2*sd,2)}}, 'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)}
-          os.makedirs('data', exist_ok=True)
-          with open('data/data.json', 'w') as f: json.dump(data, f, indent=2)
-          print(f'OK: ${p} RSI={round(r,2)}')
-          EOF
+          python3 << 'PYEOF'
+          import json, datetime, os, sys
 
-      - name: Push
+          source = os.environ.get('SOURCE', '')
+          now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+
+          if source == 'binance' and os.path.exists('/tmp/ticker.json'):
+              t = json.load(open('/tmp/ticker.json'))
+              k = json.load(open('/tmp/klines.json'))
+              c = [float(x[4]) for x in k]
+              h = [float(x[2]) for x in k]
+              l = [float(x[3]) for x in k]
+              g, ls2 = 0, 0
+              for i in range(len(c)-14, len(c)):
+                  d = c[i] - c[i-1]
+                  if d > 0: g += d
+                  else: ls2 -= d
+              r = 100 - (100/(1+g/ls2)) if ls2 > 0 else 50
+              s2 = c[-20:]
+              m = sum(s2)/20
+              sd = (sum((x-m)**2 for x in s2)/20)**0.5
+              p = float(t['lastPrice'])
+              rh, rl = h[-10:], l[-10:]
+              sig, why = 'waiting', '監控中'
+              if p > max(rh) and r > 50: sig, why = 'long', '突破近10根K線高點+RSI偏多'
+              elif p < min(rl) and r < 50: sig, why = 'short', '跌破近10根K線低點+RSI偏空'
+              data = {
+                  'ticker': t,
+                  'strategy': {'signal': sig, 'price': p, 'reason': why, 'indicators': {
+                      'rsi': round(r,2), 'ema7': round(sum(c[-7:])/7,2),
+                      'ema25': round(sum(c[-25:])/25,2), 'bbUpper': round(m+2*sd,2),
+                      'bbMiddle': round(m,2), 'bbLower': round(m-2*sd,2)}},
+                  'timestamp': now_ms
+              }
+          else:
+              print('No data source available, skipping')
+              sys.exit(0)
+
+          os.makedirs('data', exist_ok=True)
+          with open('data/data.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          print(f'OK: ${p} RSI={round(r,2)} sig={sig}')
+          PYEOF
+
+      - name: Push to gh-pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -58,4 +82,6 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "update $(date -u +%H:%M:%S)"
             git push
+          else
+            echo "No changes"
           fi
