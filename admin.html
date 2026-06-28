@@ -2,72 +2,420 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>GoldSniper Admin</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-height:100vh;padding:16px}
-.bar{background:#12121a;border:1px solid #2a2a35;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-.bar .logo{font-weight:700;color:#FFD700;font-size:16px}
-.bar .badge{font-size:12px;padding:4px 10px;border-radius:20px;background:#2a2a35;color:#888}
+body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-height:100vh}
+#loginPage{max-width:400px;margin:0 auto;padding:60px 20px;text-align:center}
+.logo{font-size:32px;margin-bottom:8px}
+#loginPage h2{color:#FFD700;font-size:22px;margin-bottom:4px}
+#loginPage p{color:#888;font-size:13px;margin-bottom:30px}
+.field{width:100%;padding:14px;border:1px solid #2a2a35;border-radius:10px;background:#12121a;color:#e8e8f0;font-size:15px;text-align:center;margin-bottom:12px;outline:none}
+.field:focus{border-color:#FFD700}
+.errmsg{color:#ff4757;font-size:12px;margin-bottom:8px;min-height:16px}
+.loginbtn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#FFD700,#b8960f);color:#000}
+.loginbtn:active{opacity:.8}
+#adminPage{display:none;max-width:600px;margin:0 auto;padding:16px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#12121a;border:1px solid #2a2a35;border-radius:12px;margin-bottom:16px}
+.topbar .logo{font-weight:700;color:#FFD700;font-size:16px}
+.topbar .right{display:flex;align-items:center;gap:10px}
+.topbar .user{font-size:12px;color:#888}
+.topbar .logout{font-size:12px;color:#ff4757;cursor:pointer;padding:4px 10px;border:1px solid #ff4757;border-radius:6px}
 .card{background:#12121a;border:1px solid #2a2a35;border-radius:12px;padding:20px;margin-bottom:16px}
 .card h3{color:#FFD700;font-size:14px;margin-bottom:12px}
-.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
 .row:last-child{border:none}
 .row .l{color:#888}
 .row .v{font-weight:700}
-.up{color:#2ed573}.down{color:#ff4757}
-.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.up{color:#2ed573}.down{color:#ff4757}.warn{color:#ffa502}
+.badge{padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(46,213,115,.15);color:#2ed573}
+.badge-err{background:rgba(255,71,87,.15);color:#ff4757}
+.badge-warn{background:rgba(255,165,2,.15);color:#ffa502}
+.badge-info{background:rgba(55,66,250,.15);color:#70a1ff}
+.add-form{background:#0a0a0f;border:1px solid #2a2a35;border-radius:10px;padding:16px;margin-bottom:12px}
+.add-form .title{font-size:13px;font-weight:700;color:#FFD700;margin-bottom:12px}
+.add-form input,.add-form select{width:100%;padding:10px;border:1px solid #2a2a35;border-radius:8px;background:#12121a;color:#e8e8f0;font-size:14px;margin-bottom:8px;outline:none}
+.add-form input:focus{border-color:#FFD700}
+.add-form select{appearance:none;-webkit-appearance:none}
+.add-form label{font-size:12px;color:#888;margin-bottom:4px;display:block}
+.add-form .row2{display:flex;gap:8px}
+.add-form .row2>*{flex:1}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px}
+.btn:active{opacity:.8}
 .btn.gold{background:linear-gradient(135deg,#FFD700,#b8960f);color:#000}
+.btn.green{background:linear-gradient(135deg,#2ed573,#17a557);color:#000}
 .btn.red{background:#ff4757;color:#fff}
-.log{background:#0a0a0f;border:1px solid #2a2a35;border-radius:8px;padding:12px;font-size:12px;color:#888;max-height:200px;overflow-y:auto;font-family:monospace}
+.btn.blue{background:#3742fa;color:#fff}
+.btn.sm{padding:6px 12px;font-size:12px;width:auto;border-radius:6px}
+.btn:disabled{opacity:.4}
+.user-list{max-height:400px;overflow-y:auto}
+.user-item{background:#0a0a0f;border:1px solid #2a2a35;border-radius:8px;padding:12px;margin-bottom:8px}
+.user-item .uhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.user-item .email{font-size:14px;font-weight:700}
+.user-item .meta{font-size:11px;color:#666;display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.user-item .acts{display:flex;gap:6px;margin-top:8px}
+.log{background:#0a0a0f;border:1px solid #2a2a35;border-radius:8px;padding:12px;font-size:11px;color:#888;max-height:200px;overflow-y:auto;font-family:monospace;line-height:1.6}
 .log .ok{color:#2ed573}.log .er{color:#ff4757}.log .ti{color:#666}
-#login{max-width:400px;margin:80px auto;text-align:center}
-#login h2{color:#FFD700;margin-bottom:8px}
-#login p{color:#888;font-size:13px;margin-bottom:20px}
-#login input{width:100%;padding:14px;border:1px solid #2a2a35;border-radius:10px;background:#12121a;color:#e8e8f0;font-size:15px;text-align:center;margin-bottom:12px}
-#login .err{color:#ff4757;font-size:12px;margin-bottom:8px}
-#main{display:none;max-width:500px;margin:0 auto}
+.tab-bar{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:1;padding:10px;border:1px solid #2a2a35;border-radius:8px;background:#12121a;color:#888;text-align:center;font-size:13px;font-weight:700;cursor:pointer}
+.tab.active{background:rgba(255,215,0,.1);border-color:#FFD700;color:#FFD700}
+.section{display:none}
+.section.active{display:block}
 </style>
 </head>
 <body>
-<div id="login">
-<h2>GoldSniper</h2>
-<p>管理後台</p>
-<input type="password" id="pw" placeholder="管理員密碼" onkeydown="if(event.key==='Enter')doLogin()">
-<input type="text" id="tk" placeholder="GitHub Token" onkeydown="if(event.key==='Enter')doLogin()">
-<div class="err" id="lerr"></div>
-<button class="btn gold" onclick="doLogin()">登入</button>
+
+<!-- ===== 管理员登录 ===== -->
+<div id="loginPage">
+<div class="logo">⚡</div>
+<h2>GoldSniper Admin</h2>
+<p>管理後台 · 僅管理員可進入</p>
+<input type="email" class="field" id="aEmail" placeholder="管理員郵箱">
+<input type="password" class="field" id="aPw" placeholder="密碼" onkeydown="if(event.key==='Enter')doAdminLogin()">
+<div class="errmsg" id="aErr"></div>
+<button class="loginbtn" onclick="doAdminLogin()">🔐 登入</button>
 </div>
-<div id="main">
-<div class="bar"><div class="logo">Admin</div><div class="badge" id="status">載入中...</div></div>
+
+<!-- ===== 管理后台主界面 ===== -->
+<div id="adminPage">
+<div class="topbar">
+<div class="logo">⚡ Admin</div>
+<div class="right">
+<span class="user" id="adminName"></span>
+<span class="logout" onclick="doLogout()">登出</span>
+</div>
+</div>
+
+<!-- Tab 切换 -->
+<div class="tab-bar">
+<div class="tab active" onclick="switchTab('users')">👥 用戶管理</div>
+<div class="tab" onclick="switchTab('status')">📡 系統狀態</div>
+<div class="tab" onclick="switchTab('log')">📋 日誌</div>
+</div>
+
+<!-- Tab: 用户管理 -->
+<div class="section active" id="secUsers">
+<!-- 添加用户 -->
+<div class="add-form">
+<div class="title">➕ 開通新用戶</div>
+<input type="email" id="newEmail" placeholder="用戶郵箱">
+<label>有效期</label>
+<select id="newExpiry">
+<option value="7">免費體驗 7 天</option>
+<option value="30" selected>免費體驗 1 個月</option>
+<option value="90">3 個月</option>
+<option value="180">6 個月</option>
+<option value="365">1 年</option>
+<option value="forever">永久</option>
+</select>
+<label>備註（可選）</label>
+<input type="text" id="newNote" placeholder="例如：朋友、VIP客戶...">
+<button class="btn green" onclick="addUser()">✅ 開通用戶</button>
+</div>
+
+<!-- 用户列表 -->
 <div class="card">
-<h3>即時數據</h3>
-<div class="row"><span class="l">PAXG 價格</span><span class="v" id="price">--</span></div>
-<div class="row"><span class="l">RSI(14)</span><span class="v" id="rsi">--</span></div>
-<div class="row"><span class="l">信號</span><span class="v" id="signal">--</span></div>
-<div class="row"><span class="l">數據時間</span><span class="v" id="dtime">--</span></div>
-<div class="row"><span class="l">數據年齡</span><span class="v" id="age">--</span></div>
+<h3>👥 已開通用戶 (<span id="userCount">0</span>)</h3>
+<div class="user-list" id="userList">
+<p style="color:#666;font-size:13px;text-align:center;padding:20px">載入中...</p>
 </div>
+</div>
+</div>
+
+<!-- Tab: 系统状态 -->
+<div class="section" id="secStatus">
 <div class="card">
-<h3>操作</h3>
-<button class="btn gold" onclick="refreshData()">強制刷新數據</button>
+<h3>📡 數據狀態</h3>
+<div class="row"><span class="l">PAXG 價格</span><span class="v" id="sPrice">--</span></div>
+<div class="row"><span class="l">RSI(14)</span><span class="v" id="sRsi">--</span></div>
+<div class="row"><span class="l">信號</span><span class="v" id="sSig">--</span></div>
+<div class="row"><span class="l">數據時間</span><span class="v" id="sTime">--</span></div>
+<div class="row"><span class="l">數據狀態</span><span id="sStatus">--</span></div>
+<button class="btn gold" onclick="forceRefresh()" style="margin-top:12px">🔄 強制刷新數據</button>
+<button class="btn blue" onclick="window.open('https://sxt158566402.github.io/gold-signal/','_blank')">👁 查看前端</button>
 </div>
+</div>
+
+<!-- Tab: 日志 -->
+<div class="section" id="secLog">
 <div class="card">
-<h3>操作日誌</h3>
-<div class="log" id="log"></div>
+<h3>📋 操作日誌</h3>
+<div class="log" id="alog"></div>
 </div>
 </div>
+</div>
+
 <script>
+/* ===== 配置 ===== */
 var REPO='sxt158566402/gold-signal';
-var PASS='sxt15866';
-var TOKEN='';
-function doLogin(){var tk=document.getElementById('tk').value.trim();var pw=document.getElementById('pw').value;if(pw!==PASS){document.getElementById('lerr').textContent='密碼錯誤';return;}if(!tk){document.getElementById('lerr').textContent='請輸入Token';return;}TOKEN=tk;document.getElementById('login').style.display='none';document.getElementById('main').style.display='block';log('登入成功','ok');loadData();setInterval(loadData,10000);}
-function log(m,t){var e=document.getElementById('log');var n=new Date().toLocaleTimeString('zh-CN');e.innerHTML='<div><span class="ti">['+n+']</span> <span class="'+t+'">'+m+'</span></div>'+e.innerHTML;}
-async function loadData(){try{var r=await fetch('data/data.json?t='+Date.now(),{cache:'no-store'});var d=await r.json();var p=d.strategy.price;var age=Math.floor((Date.now()-d.timestamp)/1000);document.getElementById('price').textContent='$'+parseFloat(p).toFixed(2);document.getElementById('rsi').textContent=d.strategy.indicators.rsi;var sig=d.strategy.signal;var se=document.getElementById('signal');if(sig==='long'){se.textContent='做多';se.className='v up';}else if(sig==='short'){se.textContent='做空';se.className='v down';}else{se.textContent='等待';se.className='v';}document.getElementById('dtime').textContent=new Date(d.timestamp).toLocaleString('zh-CN');var ae=document.getElementById('age');ae.textContent=age+'秒前';ae.className=age>180?'v down':age>90?'v':'v up';var st=document.getElementById('status');if(age>180){st.textContent='掉線';st.style.color='#ff4757';}else if(age>90){st.textContent='延遲';st.style.color='#ffa502';}else{st.textContent='正常';st.style.color='#2ed573';}}catch(e){log('載入失敗','er');}}
-async function apiCall(m,b){var r=await fetch('https://api.github.com/repos/'+REPO+'/contents/data/data.json',{method:m,headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},body:b?JSON.stringify(b):undefined});return r.json();}
-async function pushData(d){var c=await apiCall('GET');var ct=unescape(encodeURIComponent(JSON.stringify(d,null,2)));return await apiCall('PUT',{message:'admin update',content:btoa(ct),sha:c.sha,branch:'gh-pages'});}
-async function refreshData(){log('獲取最新數據...','ti');try{var r1=await fetch('https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');var tk=await r1.json();var r2=await fetch('https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50');var kl=await r2.json();var cs=kl.map(function(k){return parseFloat(k[4]);});var hs=kl.map(function(k){return parseFloat(k[2]);});var ls=kl.map(function(k){return parseFloat(k[3]);});var g=0,ls2=0;for(var i=cs.length-14;i<cs.length;i++){var dd=cs[i]-cs[i-1];if(dd>0)g+=dd;else ls2-=dd;}var rsi=ls2>0?100-(100/(1+g/ls2)):50;var s20=cs.slice(-20);var m=s20.reduce(function(a,b){return a+b;})/20;var sd=Math.sqrt(s20.reduce(function(a,x){return a+Math.pow(x-m,2);},0)/20);var p=parseFloat(tk.lastPrice);var rh=hs.slice(-10),rl=ls.slice(-10);var mx=Math.max.apply(null,rh),mn=Math.min.apply(null,rl);var sig='waiting',why='監控中';if(p>mx&&rsi>50){sig='long';why='突破';}else if(p<mn&&rsi<50){sig='short';why='跌破';}var data={ticker:tk,strategy:{signal:sig,price:p,reason:why,indicators:{rsi:+rsi.toFixed(2),ema7:+(cs.slice(-7).reduce(function(a,b){return a+b;})/7).toFixed(2),ema25:+(cs.slice(-25).reduce(function(a,b){return a+b;})/25).toFixed(2),bbUpper:+(m+2*sd).toFixed(2),bbMiddle:+m.toFixed(2),bbLower:+(m-2*sd).toFixed(2)}},timestamp:Date.now()};var res=await pushData(data);if(res.commit){log('推送成功 $'+p,'ok');}else{log('失敗: '+res.message,'er');}loadData();}catch(e){log('失敗: '+e.message,'er');}}
+var TOKEN=localStorage.getItem('gs_admin_token')||'';
+var ADMIN_EMAIL='158566402@qq.com';
+var ADMIN_PASS='Sxt158566';
+var usersCache={};
+
+/* ===== Tab ===== */
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(function(el,i){
+    el.classList.toggle('active',['users','status','log'][i]===t);
+  });
+  document.querySelectorAll('.section').forEach(function(el){
+    el.classList.remove('active');
+  });
+  document.getElementById('sec'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');
+  if(t==='status') loadStatus();
+}
+
+/* ===== 管理员登录 ===== */
+function doAdminLogin(){
+  var email=document.getElementById('aEmail').value.trim();
+  var pw=document.getElementById('aPw').value;
+  var err=document.getElementById('aErr');
+  if(email!==ADMIN_EMAIL){err.textContent='郵箱不正確';return;}
+  if(pw!==ADMIN_PASS){err.textContent='密碼錯誤';return;}
+  if(!TOKEN){
+    var tk=prompt('首次登入需要 GitHub Token（ghp_xxx）\n用於讀寫用戶數據');
+    if(!tk||!tk.startsWith('ghp_')){err.textContent='Token 格式不對';return;}
+    TOKEN=tk;
+    localStorage.setItem('gs_admin_token',TOKEN);
+  }
+  err.textContent='';
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('adminPage').style.display='block';
+  document.getElementById('adminName').textContent='👤 '+email;
+  alog('管理員登入成功','ok');
+  loadUsers();
+}
+
+function doLogout(){
+  document.getElementById('adminPage').style.display='none';
+  document.getElementById('loginPage').style.display='block';
+  document.getElementById('aEmail').value='';
+  document.getElementById('aPw').value='';
+}
+
+/* ===== 日志 ===== */
+function alog(m,t){
+  var e=document.getElementById('alog');
+  var n=new Date().toLocaleTimeString('zh-CN');
+  e.innerHTML='<div><span class="ti">['+n+']</span> <span class="'+(t||'')+'">'+m+'</span></div>'+e.innerHTML;
+}
+
+/* ===== GitHub API ===== */
+async function gh(method,file,body){
+  var url='https://api.github.com/repos/'+REPO+'/contents/'+file;
+  var opts={method:method,headers:{'Authorization':'token '+TOKEN,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'}};
+  if(body)opts.body=JSON.stringify(body);
+  var r=await fetch(url,opts);
+  return r.json();
+}
+
+/* ===== 用户管理 ===== */
+async function loadUsers(){
+  try{
+    var r=await fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'});
+    usersCache=await r.json();
+    renderUsers();
+  }catch(e){
+    // 可能文件不存在，尝试从 GitHub API 读
+    try{
+      var r=await gh('GET','data/users.json');
+      if(r.content){
+        usersCache=JSON.parse(decodeURIComponent(escape(atob(r.content))));
+        renderUsers();
+      }
+    }catch(e2){alog('載入用戶失敗','er');}
+  }
+}
+
+function renderUsers(){
+  var list=document.getElementById('userList');
+  var keys=Object.keys(usersCache);
+  document.getElementById('userCount').textContent=keys.length;
+  
+  if(keys.length===0){
+    list.innerHTML='<p style="color:#666;font-size:13px;text-align:center;padding:20px">暫無用戶</p>';
+    return;
+  }
+  
+  var now=Date.now();
+  var html='';
+  keys.sort(function(a,b){return usersCache[a].created-usersCache[b].created;});
+  
+  keys.forEach(function(email){
+    var u=usersCache[email];
+    var exp=u.expiry;
+    var isForever=exp===0;
+    var isExpired=!isForever&&exp<now;
+    var daysLeft=isForever?999:Math.max(0,Math.ceil((exp-now)/86400000));
+    
+    var statusBadge,isActive;
+    if(isExpired){
+      statusBadge='<span class="badge badge-err">已過期</span>';
+      isActive=false;
+    }else if(isForever){
+      statusBadge='<span class="badge badge-info">永久</span>';
+      isActive=true;
+    }else if(daysLeft<=3){
+      statusBadge='<span class="badge badge-warn">剩'+daysLeft+'天</span>';
+      isActive=true;
+    }else{
+      statusBadge='<span class="badge badge-ok">'+daysLeft+'天</span>';
+      isActive=true;
+    }
+    
+    var expText=isForever?'永久':new Date(exp).toLocaleDateString('zh-CN');
+    var created=new Date(u.created).toLocaleDateString('zh-CN');
+    
+    html+='<div class="user-item">';
+    html+='<div class="uhd"><span class="email">'+email+'</span>'+statusBadge+'</div>';
+    html+='<div class="meta">';
+    html+='<span>到期: '+expText+'</span>';
+    html+='<span>開通: '+created+'</span>';
+    if(u.note)html+='<span>備註: '+u.note+'</span>';
+    html+='</div>';
+    html+='<div class="acts">';
+    
+    if(isExpired){
+      html+='<button class="btn green sm" onclick="renewUser(\''+email+'\',30)">續1月</button>';
+      html+='<button class="btn blue sm" onclick="renewUser(\''+email+'\',\'forever\')">永久</button>';
+    }else{
+      html+='<button class="btn gold sm" onclick="renewUser(\''+email+'\',30)">+1月</button>';
+      html+='<button class="btn blue sm" onclick="renewUser(\''+email+'\',\'forever\')">改永久</button>';
+      html+='<button class="btn red sm" onclick="delUser(\''+email+'\')">刪除</button>';
+    }
+    
+    html+='</div></div>';
+  });
+  
+  list.innerHTML=html;
+}
+
+async function addUser(){
+  var email=document.getElementById('newEmail').value.trim().toLowerCase();
+  var expiryVal=document.getElementById('newExpiry').value;
+  var note=document.getElementById('newNote').value.trim();
+  
+  if(!email||!email.includes('@')){alog('請輸入有效郵箱','er');return;}
+  
+  var now=Date.now();
+  var expiry;
+  if(expiryVal==='forever'){expiry=0;}
+  else{expiry=now+parseInt(expiryVal)*86400000;}
+  
+  // 生成初始密码
+  var pw='gs'+Math.random().toString(36).slice(2,8);
+  
+  usersCache[email]={password:pw,expiry:expiry,created:now,note:note||''};
+  
+  var ok=await pushUsers('開通用戶 '+email);
+  if(ok){
+    alog('✅ 用戶已開通: '+email,'ok');
+    alog('密碼: '+pw,'ti');
+    alert('用戶已開通！\n\n郵箱: '+email+'\n密碼: '+pw+'\n有效期: '+(expiryVal==='forever'?'永久':expiryVal+'天')+'\n\n請將帳密發給用戶');
+    document.getElementById('newEmail').value='';
+    document.getElementById('newNote').value='';
+    renderUsers();
+  }
+}
+
+async function renewUser(email,days){
+  var now=Date.now();
+  if(days==='forever'){
+    usersCache[email].expiry=0;
+    alog(email+' → 永久','ok');
+  }else{
+    var base=usersCache[email].expiry<now?now:usersCache[email].expiry;
+    usersCache[email].expiry=base+days*86400000;
+    alog(email+' +'+days+'天','ok');
+  }
+  await pushUsers('續期 '+email);
+  renderUsers();
+}
+
+async function delUser(email){
+  if(!confirm('確定刪除用戶 '+email+'？'))return;
+  delete usersCache[email];
+  await pushUsers('刪除用戶 '+email);
+  alog('已刪除: '+email,'ti');
+  renderUsers();
+}
+
+async function pushUsers(msg){
+  try{
+    var existing=await gh('GET','data/users.json');
+    var content=unescape(encodeURIComponent(JSON.stringify(usersCache,null,2)));
+    var body={message:msg+' '+new Date().toISOString().slice(11,19),content:btoa(content),branch:'gh-pages'};
+    if(existing.sha)body.sha=existing.sha;
+    var res=await gh('PUT','data/users.json',body);
+    if(res.commit)return true;
+    alog('推送失敗: '+res.message,'er');
+    return false;
+  }catch(e){alog('推送失敗: '+e.message,'er');return false;}
+}
+
+/* ===== 系统状态 ===== */
+async function loadStatus(){
+  try{
+    var r=await fetch('https://sxt158566402.github.io/gold-signal/data/data.json?t='+Date.now(),{cache:'no-store'});
+    var d=await r.json();
+    var p=parseFloat(d.strategy.price);
+    var age=Math.floor((Date.now()-d.timestamp)/1000);
+    document.getElementById('sPrice').textContent='$'+p.toFixed(2);
+    var rsi=d.strategy.indicators.rsi;
+    var re=document.getElementById('sRsi');
+    re.textContent=rsi.toFixed(1);
+    re.className='v'+(rsi>70?' down':rsi<30?' up':'');
+    var sig=d.strategy.signal;
+    var se=document.getElementById('sSig');
+    if(sig==='long'){se.innerHTML='<span class="up">做多</span>';}
+    else if(sig==='short'){se.innerHTML='<span class="down">做空</span>';}
+    else{se.innerHTML='<span class="warn">等待</span>';}
+    document.getElementById('sTime').textContent=new Date(d.timestamp).toLocaleString('zh-CN');
+    var st=document.getElementById('sStatus');
+    if(age>180){st.innerHTML='<span class="badge badge-err">掉線</span>';}
+    else if(age>90){st.innerHTML='<span class="badge badge-warn">延遲</span>';}
+    else{st.innerHTML='<span class="badge badge-ok">正常</span>';}
+  }catch(e){alog('狀態載入失敗','er');}
+}
+
+async function forceRefresh(){
+  alog('強制刷新...','ti');
+  try{
+    var r1=await fetch('https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');
+    var tk=await r1.json();
+    var r2=await fetch('https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50');
+    var kl=await r2.json();
+    var cs=kl.map(function(k){return parseFloat(k[4]);});
+    var hs=kl.map(function(k){return parseFloat(k[2]);});
+    var ls=kl.map(function(k){return parseFloat(k[3]);});
+    var g=0,ls2=0;
+    for(var i=cs.length-14;i<cs.length;i++){var dd=cs[i]-cs[i-1];if(dd>0)g+=dd;else ls2-=dd;}
+    var rsi=ls2>0?100-(100/(1+g/ls2)):50;
+    var s20=cs.slice(-20);
+    var m=s20.reduce(function(a,b){return a+b;})/20;
+    var sd=Math.sqrt(s20.reduce(function(a,x){return a+Math.pow(x-m,2);},0)/20);
+    var p=parseFloat(tk.lastPrice);
+    var rh=hs.slice(-10),rl=ls.slice(-10);
+    var mx=Math.max.apply(null,rh),mn=Math.min.apply(null,rl);
+    var sig='waiting',why='監控中';
+    if(p>mx&&rsi>50){sig='long';why='突破近10根K線高點+RSI偏多';}
+    else if(p<mn&&rsi<50){sig='short';why='跌破近10根K線低點+RSI偏空';}
+    var data={ticker:tk,strategy:{signal:sig,price:p,reason:why,indicators:{rsi:+rsi.toFixed(2),ema7:+(cs.slice(-7).reduce(function(a,b){return a+b;})/7).toFixed(2),ema25:+(cs.slice(-25).reduce(function(a,b){return a+b;})/25).toFixed(2),bbUpper:+(m+2*sd).toFixed(2),bbMiddle:+m.toFixed(2),bbLower:+(m-2*sd).toFixed(2)}},timestamp:Date.now()};
+    var existing=await gh('GET','data/data.json');
+    var body={message:'admin refresh',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)))),branch:'gh-pages'};
+    if(existing.sha)body.sha=existing.sha;
+    var res=await gh('PUT','data/data.json',body);
+    if(res.commit){alog('推送成功 $'+p.toFixed(2),'ok');loadStatus();}
+    else{alog('失敗: '+res.message,'er');}
+  }catch(e){alog('失敗: '+e.message,'er');}
+}
+
+/* ===== 定时刷新用户列表 ===== */
+setInterval(function(){
+  if(document.getElementById('adminPage').style.display!=='none') loadUsers();
+},30000);
 </script>
 </body>
 </html>
