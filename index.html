@@ -117,6 +117,52 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div class="card long hid" id="ls"><div class="hd"><span class="badge long">📈 做多</span><span id="lt"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="le">--</span></div><div class="row"><span class="l">止損 (-10)</span><span class="v sl" id="lsl">--</span></div><div class="row"><span class="l">止盈 (+10)</span><span class="v tp" id="ltp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="lr"></div></div>
 <div class="card short hid" id="ss"><div class="hd"><span class="badge short">📉 做空</span><span id="st"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="se">--</span></div><div class="row"><span class="l">止損 (+10)</span><span class="v sl" id="ssl">--</span></div><div class="row"><span class="l">止盈 (-10)</span><span class="v tp" id="stp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="sr"></div></div>
 </section>
+<!-- 今日运势区域 -->
+<div id="fortuneSection" style="margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(138,43,226,.15),rgba(138,43,226,.05));border:1px solid rgba(138,43,226,.3);border-radius:10px;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<div style="font-size:14px;font-weight:700;color:#9b59b6">🔮 今日运势</div>
+<button id="fortuneBtn" onclick="showFortuneModal()" style="padding:6px 12px;background:rgba(138,43,226,.3);border:1px solid rgba(138,43,226,.5);border-radius:6px;color:#e8e8f0;font-size:12px;cursor:pointer">点击查看</button>
+</div>
+<div id="fortuneResult" style="display:none">
+<div style="text-align:center;margin-bottom:10px">
+<img src="generated-images/img-1782666596716-bk3krj.png" style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(138,43,226,.5);margin-bottom:8px">
+</div>
+<div id="fortuneText" style="font-size:13px;color:#e8e8f0;line-height:1.6;text-align:center"></div>
+</div>
+<div id="fortuneEmpty" style="font-size:12px;color:#888;text-align:center">输入生辰八字，查看今日运势</div>
+</div>
+
+<!-- 运势输入弹窗 -->
+<div id="fortuneModal" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:none;align-items:center;justify-content:center">
+<div style="background:#12121a;border:1px solid #2a2a35;border-radius:16px;padding:24px;max-width:360px;width:90%">
+<div style="text-align:center;margin-bottom:16px">
+<img src="generated-images/img-1782666596716-bk3krj.png" style="width:100px;height:100px;border-radius:50%;border:2px solid rgba(138,43,226,.5)">
+<div style="font-size:16px;font-weight:700;color:#9b59b6;margin-top:8px">请输入您的信息</div>
+</div>
+<input type="text" id="fortuneName" placeholder="姓名" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:10px;outline:none">
+<input type="date" id="fortuneBirth" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:10px;outline:none">
+<select id="fortuneTime" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:16px;outline:none">
+<option value="">请选择出生时段</option>
+<option value="zi">子时 (23:00-01:00)</option>
+<option value="chou">丑时 (01:00-03:00)</option>
+<option value="yin">寅时 (03:00-05:00)</option>
+<option value="mao">卯时 (05:00-07:00)</option>
+<option value="chen">辰时 (07:00-09:00)</option>
+<option value="si">巳时 (09:00-11:00)</option>
+<option value="wu">午时 (11:00-13:00)</option>
+<option value="wei">未时 (13:00-15:00)</option>
+<option value="shen">申时 (15:00-17:00)</option>
+<option value="you">酉时 (17:00-19:00)</option>
+<option value="xu">戌时 (19:00-21:00)</option>
+<option value="hai">亥时 (21:00-23:00)</option>
+</select>
+<div style="display:flex;gap:10px">
+<button onclick="closeFortuneModal()" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:transparent;color:#888;font-size:14px;cursor:pointer">取消</button>
+<button onclick="calcFortune()" style="flex:1;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#9b59b6,#6c3483);color:#fff;font-size:14px;font-weight:700;cursor:pointer">开始算命</button>
+</div>
+</div>
+</div>
+
 <!-- 风险提醒区域 -->
 <div id="riskAlert" style="display:none;margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(255,71,87,.15),rgba(255,71,87,.05));border:1px solid rgba(255,71,87,.3);border-radius:10px;">
 <div style="font-size:14px;font-weight:700;color:#ff4757;margin-bottom:8px">⚠️ 高风险提醒</div>
@@ -360,6 +406,146 @@ async function checkRiskAlerts(){
     riskDiv.style.display = 'none';
   }
 }
+
+/* ===== 八字运势计算 ===== */
+var TIAN_GAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+var DI_ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+var GAN_WUXING = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+var ZHI_WUXING = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
+var SHI_CHEN = {'zi':0,'chou':1,'yin':2,'mao':3,'chen':4,'si':5,'wu':6,'wei':7,'shen':8,'you':9,'xu':10,'hai':11};
+var SHENG_XIAO = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
+
+function getYearGanZhi(year) {
+  var ganIdx = (year - 4) % 10;
+  var zhiIdx = (year - 4) % 12;
+  return { gan: TIAN_GAN[ganIdx], zhi: DI_ZHI[zhiIdx] };
+}
+
+function getMonthGanZhi(year, month) {
+  var zhiIdx = (month + 1) % 12;
+  var yearGan = getYearGanZhi(year).gan;
+  var ganBase = TIAN_GAN.indexOf(yearGan);
+  var ganIdx = (ganBase * 2 + month + 1) % 10;
+  return { gan: TIAN_GAN[ganIdx], zhi: DI_ZHI[zhiIdx] };
+}
+
+function getDayGanZhi(year, month, day) {
+  var baseDate = new Date(2000, 0, 7);
+  var targetDate = new Date(year, month - 1, day);
+  var diff = Math.floor((targetDate - baseDate) / 86400000);
+  var ganIdx = ((diff % 10) + 10) % 10;
+  var zhiIdx = ((diff % 12) + 12) % 12;
+  return { gan: TIAN_GAN[ganIdx], zhi: DI_ZHI[zhiIdx] };
+}
+
+function getHourZhi(shiChen) { return DI_ZHI[SHI_CHEN[shiChen]]; }
+
+function countWuXing(bazi) {
+  var count = {'木':0,'火':0,'土':0,'金':0,'水':0};
+  count[GAN_WUXING[bazi.year.gan]]++;
+  count[GAN_WUXING[bazi.month.gan]]++;
+  count[GAN_WUXING[bazi.day.gan]]++;
+  count[ZHI_WUXING[bazi.year.zhi]]++;
+  count[ZHI_WUXING[bazi.month.zhi]]++;
+  count[ZHI_WUXING[bazi.day.zhi]]++;
+  count[ZHI_WUXING[bazi.hour.zhi]]++;
+  return count;
+}
+
+function getShengKe(myWx, dayWx) {
+  var sheng = {'木':'火','火':'土','土':'金','金':'水','水':'木'};
+  var ke = {'木':'土','土':'水','水':'火','火':'金','金':'木'};
+  var shengMe = {'木':'水','水':'金','金':'土','土':'火','火':'木'};
+  var keMe = {'木':'金','金':'火','火':'水','水':'土','土':'木'};
+  if(myWx === dayWx) return { type: '比和', score: 0 };
+  if(sheng[myWx] === dayWx) return { type: '我生', score: -1 };
+  if(ke[myWx] === dayWx) return { type: '我克', score: 1 };
+  if(shengMe[myWx] === dayWx) return { type: '生我', score: 2 };
+  if(keMe[myWx] === dayWx) return { type: '克我', score: -2 };
+  return { type: '中', score: 0 };
+}
+
+function getNameScore(name) {
+  var score = 0;
+  for(var i = 0; i < name.length; i++) score += name.charCodeAt(i);
+  return score % 10;
+}
+
+function calcDailyFortune(bazi, name) {
+  var today = new Date();
+  var todayBazi = getDayGanZhi(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  var dayWx = GAN_WUXING[todayBazi.gan];
+  var myWx = GAN_WUXING[bazi.day.gan];
+  var relation = getShengKe(myWx, dayWx);
+  var wxCount = countWuXing(bazi);
+  var lacking = [];
+  for(var wx in wxCount) if(wxCount[wx] === 0) lacking.push(wx);
+  var baseScore = 50 + relation.score * 10 + getNameScore(name) * 2 - lacking.length * 5;
+  var seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  var random = ((seed * 9301 + 49297) % 233280) / 233280;
+  baseScore = Math.max(0, Math.min(100, baseScore + Math.floor(random * 20) - 10));
+  var level, color, advice;
+  if(baseScore >= 70) { level = '吉'; color = '#2ed573'; advice = '今日运势旺盛，可大胆操作！'; }
+  else if(baseScore >= 50) { level = '平'; color = '#FFD700'; advice = '运势平稳，谨慎操作。'; }
+  else { level = '凶'; color = '#ff4757'; advice = '今日运势不佳，建议观望！'; }
+  return { score: baseScore, level: level, color: color, advice: advice,
+    dayGanZhi: todayBazi.gan + todayBazi.zhi, dayWx: dayWx, myWx: myWx,
+    relation: relation.type, lacking: lacking, shengXiao: SHENG_XIAO[(bazi.yearZhiIdx || 0)] };
+}
+
+function showFortuneModal() {
+  document.getElementById('fortuneModal').style.display = 'flex';
+  var saved = localStorage.getItem('gs_fortune');
+  if(saved) { var data = JSON.parse(saved);
+    document.getElementById('fortuneName').value = data.name || '';
+    document.getElementById('fortuneBirth').value = data.birth || '';
+    document.getElementById('fortuneTime').value = data.time || '';
+  }
+}
+function closeFortuneModal() { document.getElementById('fortuneModal').style.display = 'none'; }
+
+function calcFortune() {
+  var name = document.getElementById('fortuneName').value.trim();
+  var birth = document.getElementById('fortuneBirth').value;
+  var time = document.getElementById('fortuneTime').value;
+  if(!name) { alert('请输入姓名'); return; }
+  if(!birth) { alert('请输入出生日期'); return; }
+  if(!time) { alert('请选择出生时段'); return; }
+  var parts = birth.split('-');
+  var year = parseInt(parts[0]), month = parseInt(parts[1]), day = parseInt(parts[2]);
+  var bazi = { year: getYearGanZhi(year), month: getMonthGanZhi(year, month),
+    day: getDayGanZhi(year, month, day), hour: { gan: '?', zhi: getHourZhi(time) }, yearZhiIdx: (year - 4) % 12 };
+  var fortune = calcDailyFortune(bazi, name);
+  localStorage.setItem('gs_fortune', JSON.stringify({ name: name, birth: birth, time: time, lastCalc: Date.now(), result: fortune }));
+  showFortuneResult(fortune);
+  if(fortune.level === '凶') isRiskDay = true;
+  closeFortuneModal();
+}
+
+function showFortuneResult(fortune) {
+  document.getElementById('fortuneResult').style.display = 'block';
+  document.getElementById('fortuneEmpty').style.display = 'none';
+  document.getElementById('fortuneBtn').textContent = '重新计算';
+  var html = '<div style="font-size:24px;font-weight:700;color:' + fortune.color + ';margin-bottom:8px">' + fortune.level + '</div>';
+  html += '<div style="font-size:12px;color:#888;margin-bottom:6px">' + fortune.dayGanZhi + '日 | ' + fortune.dayWx + '旺</div>';
+  html += '<div style="font-size:11px;color:#666;margin-bottom:8px">你的日主：<span style="color:#9b59b6">' + fortune.myWx + '</span> | ' + fortune.relation + '</div>';
+  html += '<div style="font-size:13px;color:' + fortune.color + ';font-weight:700">' + fortune.advice + '</div>';
+  if(fortune.lacking.length > 0) html += '<div style="font-size:11px;color:#888;margin-top:6px">命中缺：' + fortune.lacking.join('、') + '</div>';
+  document.getElementById('fortuneText').innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var saved = localStorage.getItem('gs_fortune');
+  if(saved) {
+    var data = JSON.parse(saved);
+    var today = new Date().toDateString();
+    var calcDate = new Date(data.lastCalc).toDateString();
+    if(today === calcDate && data.result) {
+      showFortuneResult(data.result);
+      if(data.result.level === '凶') isRiskDay = true;
+    }
+  }
+});
 
 checkLogin();
 </script>
