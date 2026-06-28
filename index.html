@@ -414,7 +414,7 @@ async function loadChart(period) {
     drawKlineChart();
   } catch(e) {
     console.log('Chart error:', e);
-    if (debugDiv) debugDiv.textContent = '错误: ' + e.message;
+    if (debugDiv) debugDiv.textContent = '错误: ' + (e.message || e.toString());
   }
 }
 
@@ -436,6 +436,7 @@ function drawKlineChart() {
     var parent = canvas.parentElement;
     var w = parent.offsetWidth - 20;
     var h = parent.offsetHeight - 20;
+    console.log('Canvas尺寸:', w, 'x', h);
     if (w <= 0) w = 300;
     if (h <= 0) h = 160;
     canvas.width = w;
