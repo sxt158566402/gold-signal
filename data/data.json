@@ -7,5 +7,5 @@
     "reason": "監控中",
     "indicators": {"rsi": 50, "ema7": 4058.19, "ema25": 4058.19, "bbUpper": 4058.19, "bbMiddle": 4058.19, "bbLower": 4058.19}
   },
-  "timestamp": 1782685167000
+  "timestamp": 1782685180000
 }
