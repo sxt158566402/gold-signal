@@ -288,7 +288,252 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 </div>
 </div>
 </section>
+
+<!-- 金价走势图 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(30,144,255,.08),rgba(30,144,255,.02));border:1px solid rgba(30,144,255,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#1e90ff,#0066cc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📈</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#1e90ff">金价走势图</div>
+<div style="font-size:11px;color:#888">PAXG/USDT 近30天</div>
+</div>
+<div style="margin-left:auto;display:flex;gap:6px">
+<button onclick="loadChart('7d')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.2);border:1px solid rgba(30,144,255,.4);border-radius:4px;color:#1e90ff;cursor:pointer">7天</button>
+<button onclick="loadChart('30d')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.4);border:1px solid rgba(30,144,255,.6);border-radius:4px;color:#fff;cursor:pointer">30天</button>
+</div>
+</div>
+<div style="position:relative;height:200px;background:rgba(0,0,0,.3);border-radius:8px;padding:10px">
+<canvas id="priceChart"></canvas>
+</div>
+</div>
+</section>
+
+<!-- 仓位计算器 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,215,0,.02));border:1px solid rgba(255,215,0,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">🧮</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#FFD700">仓位计算器</div>
+<div style="font-size:11px;color:#888">科学管理你的仓位</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">账户资金($)</div>
+<input type="number" id="calcBalance" placeholder="1000" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">风险比例(%)</div>
+<input type="number" id="calcRisk" placeholder="1" value="1" min="0.1" max="5" step="0.1" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">止损点数</div>
+<input type="number" id="calcSL" placeholder="10" value="10" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">当前价格</div>
+<input type="number" id="calcPrice" placeholder="3300" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+</div>
+<button onclick="calcPosition()" style="width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">计算建议仓位</button>
+<div id="calcResult" style="display:none;padding:12px;background:rgba(46,213,115,.1);border:1px solid rgba(46,213,115,.3);border-radius:8px">
+<div style="font-size:13px;color:#2ed573;font-weight:700;margin-bottom:8px">📊 计算结果</div>
+<div id="calcResultText" style="font-size:12px;color:#e8e8f0;line-height:1.6"></div>
+</div>
+</div>
+</section>
+
+<!-- 历史信号统计 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(46,213,115,.08),rgba(46,213,115,.02));border:1px solid rgba(46,213,115,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#2ed573,#1e90ff);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📊</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#2ed573">历史信号统计</div>
+<div style="font-size:11px;color:#888">信号胜率分析</div>
+</div>
+</div>
+<div style="display:flex;gap:12px;margin-bottom:12px">
+<div style="flex:1;text-align:center;padding:12px;background:rgba(46,213,115,.1);border-radius:8px">
+<div style="font-size:20px;font-weight:700;color:#2ed573" id="statTotal">0</div>
+<div style="font-size:11px;color:#888">总信号数</div>
+</div>
+<div style="flex:1;text-align:center;padding:12px;background:rgba(46,213,115,.1);border-radius:8px">
+<div style="font-size:20px;font-weight:700;color:#2ed573" id="statWin">0%</div>
+<div style="font-size:11px;color:#888">总胜率</div>
+</div>
+</div>
+<div style="display:flex;gap:12px">
+<div style="flex:1;text-align:center;padding:12px;background:rgba(46,213,115,.1);border-radius:8px">
+<div style="font-size:18px;font-weight:700;color:#2ed573" id="statLong">0%</div>
+<div style="font-size:11px;color:#888">做多胜率</div>
+</div>
+<div style="flex:1;text-align:center;padding:12px;background:rgba(255,71,87,.1);border-radius:8px">
+<div style="font-size:18px;font-weight:700;color:#ff4757" id="statShort">0%</div>
+<div style="font-size:11px;color:#888">做空胜率</div>
+</div>
+</div>
+</div>
+</section>
+
 <script>
+/* ===== 金价走势图 ===== */
+var chartData = [];
+
+async function loadChart(days) {
+  try {
+    var limit = days === '7d' ? 7 : 30;
+    var r = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1d&limit=' + limit, {cache: 'no-store'});
+    var data = await r.json();
+    chartData = data.map(function(k) {
+      return {
+        time: new Date(k[0]).toLocaleDateString('zh-CN', {month: 'short', day: 'numeric'}),
+        open: parseFloat(k[1]),
+        high: parseFloat(k[2]),
+        low: parseFloat(k[3]),
+        close: parseFloat(k[4])
+      };
+    });
+    drawChart();
+  } catch(e) {
+    console.log('Chart error:', e);
+  }
+}
+
+function drawChart() {
+  var canvas = document.getElementById('priceChart');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.parentElement.clientWidth - 20;
+  var h = 180;
+  canvas.width = w;
+  canvas.height = h;
+  ctx.clearRect(0, 0, w, h);
+  if (chartData.length === 0) return;
+  
+  var closes = chartData.map(function(d) { return d.close; });
+  var min = Math.min.apply(null, closes) * 0.998;
+  var max = Math.max.apply(null, closes) * 1.002;
+  var range = max - min;
+  
+  // 画网格线
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (var i = 0; i < 5; i++) {
+    var y = (h / 5) * i + 10;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+    var price = max - (range / 5) * i;
+    ctx.fillStyle = '#888';
+    ctx.font = '10px Arial';
+    ctx.fillText(price.toFixed(0), 2, y - 2);
+  }
+  
+  // 画价格线
+  ctx.beginPath();
+  ctx.strokeStyle = '#1e90ff';
+  ctx.lineWidth = 2;
+  for (var i = 0; i < chartData.length; i++) {
+    var x = (w / (chartData.length - 1)) * i;
+    var y = h - ((chartData[i].close - min) / range) * (h - 20) - 10;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  // 画渐变填充
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  var gradient = ctx.createLinearGradient(0, 0, 0, h);
+  gradient.addColorStop(0, 'rgba(30,144,255,0.3)');
+  gradient.addColorStop(1, 'rgba(30,144,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  
+  // 画最新价格点
+  var lastX = w;
+  var lastY = h - ((chartData[chartData.length-1].close - min) / range) * (h - 20) - 10;
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#1e90ff';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+/* ===== 仓位计算器 ===== */
+function calcPosition() {
+  var balance = parseFloat(document.getElementById('calcBalance').value);
+  var riskPercent = parseFloat(document.getElementById('calcRisk').value);
+  var slPoints = parseFloat(document.getElementById('calcSL').value);
+  var price = parseFloat(document.getElementById('calcPrice').value);
+  
+  if (!balance || !riskPercent || !slPoints || !price) {
+    alert('请填写所有参数');
+    return;
+  }
+  
+  // 计算风险金额
+  var riskAmount = balance * (riskPercent / 100);
+  // PAXG 1点 = $0.01/克，1手=100克，所以1点=$1
+  var pointValue = 1;
+  // 计算建议手数
+  var lots = riskAmount / (slPoints * pointValue);
+  lots = Math.floor(lots * 100) / 100; // 保留2位小数
+  
+  var html = '';
+  html += '<div style="margin-bottom:6px">💰 账户资金: <span style="color:#FFD700;font-weight:700">$' + balance.toFixed(2) + '</span></div>';
+  html += '<div style="margin-bottom:6px">⚠️ 风险金额: <span style="color:#ff4757;font-weight:700">$' + riskAmount.toFixed(2) + '</span> (' + riskPercent + '%)</div>';
+  html += '<div style="margin-bottom:6px">📉 止损点数: <span style="color:#ff4757;font-weight:700">' + slPoints + '点</span></div>';
+  html += '<div style="margin-bottom:6px">📊 建议手数: <span style="color:#2ed573;font-weight:700;font-size:16px">' + lots + '手</span></div>';
+  html += '<div style="font-size:11px;color:#888;margin-top:8px">💡 100美金建议0.01手，严格控制风险！</div>';
+  
+  document.getElementById('calcResultText').innerHTML = html;
+  document.getElementById('calcResult').style.display = 'block';
+}
+
+/* ===== 历史信号统计 ===== */
+var signalHistory = JSON.parse(localStorage.getItem('gs_signal_history') || '[]');
+
+function recordSignal(type, entry, sl, tp) {
+  signalHistory.push({
+    type: type,
+    entry: entry,
+    sl: sl,
+    tp: tp,
+    time: Date.now(),
+    result: 'pending'
+  });
+  localStorage.setItem('gs_signal_history', JSON.stringify(signalHistory));
+  updateStats();
+}
+
+function updateStats() {
+  var total = signalHistory.length;
+  var wins = signalHistory.filter(function(s) { return s.result === 'win'; }).length;
+  var longs = signalHistory.filter(function(s) { return s.type === 'long'; });
+  var shorts = signalHistory.filter(function(s) { return s.type === 'short'; });
+  var longWins = longs.filter(function(s) { return s.result === 'win'; }).length;
+  var shortWins = shorts.filter(function(s) { return s.result === 'win'; }).length;
+  
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statWin').textContent = total > 0 ? Math.round(wins / total * 100) + '%' : '0%';
+  document.getElementById('statLong').textContent = longs.length > 0 ? Math.round(longWins / longs.length * 100) + '%' : '0%';
+  document.getElementById('statShort').textContent = shorts.length > 0 ? Math.round(shortWins / shorts.length * 100) + '%' : '0%';
+}
+
+// 初始化加载
+loadChart('30d');
+updateStats();
+
 /* ===== 用户登录验证 ===== */
 var REPO='sxt158566402/gold-signal';
 var currentUser=localStorage.getItem('gs_user');
