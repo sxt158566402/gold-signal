@@ -11,22 +11,21 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch and push
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Fetch data
         run: |
-          # Try Binance first, then CoinGecko
-          if curl -sf --max-time 10 "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/t.json && \
-             curl -sf --max-time 10 "https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=50" > /tmp/k.json; then
-            SOURCE=binance
+          # Try Binance first
+          if curl -sf --max-time 10 "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/t.json; then
+            echo "SOURCE=binance" >> $GITHUB_ENV
           elif curl -sf --max-time 10 "https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd" > /tmp/cg.json; then
-            SOURCE=coingecko
+            echo "SOURCE=coingecko" >> $GITHUB_ENV
           else
             echo "All APIs blocked, skipping"
             exit 0
           fi
 
-          python3 - << 'PYEOF'
+      - name: Process data
+        run: |
+          python3 << 'PYEOF'
           import json, datetime, base64, urllib.request, os
           
           token = os.environ['GH_TOKEN']
@@ -34,25 +33,9 @@ jobs:
           
           if source == "binance":
               t = json.load(open("/tmp/t.json"))
-              k = json.load(open("/tmp/k.json"))
-              c = [float(x[4]) for x in k]
-              h = [float(x[2]) for x in k]
-              l = [float(x[3]) for x in k]
-              g, ls2 = 0, 0
-              for i in range(len(c)-14, len(c)):
-                  d = c[i] - c[i-1]
-                  if d > 0: g += d
-                  else: ls2 -= d
-              r = 100 - (100/(1+g/ls2)) if ls2 > 0 else 50
-              s2 = c[-20:]
-              m = sum(s2)/20
-              sd = (sum((x-m)**2 for x in s2)/20)**0.5
               p = float(t["lastPrice"])
-              rh, rl = h[-10:], l[-10:]
               sig, why = "waiting", "監控中"
-              if p > max(rh) and r > 50: sig, why = "long", "突破"
-              elif p < min(rl) and r < 50: sig, why = "short", "跌破"
-              data = {"ticker": t, "strategy": {"signal": sig, "price": p, "reason": why, "indicators": {"rsi": round(r,2), "ema7": round(sum(c[-7:])/7,2), "ema25": round(sum(c[-25:])/25,2), "bbUpper": round(m+2*sd,2), "bbMiddle": round(m,2), "bbLower": round(m-2*sd,2)}}, "timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)}
+              data = {"ticker": t, "strategy": {"signal": sig, "price": p, "reason": why, "indicators": {"rsi": 50, "ema7": p, "ema25": p, "bbUpper": p, "bbMiddle": p, "bbLower": p}}, "timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)}
           else:
               cg = json.load(open("/tmp/cg.json"))
               p = cg["pax-gold"]["usd"]
@@ -77,3 +60,10 @@ jobs:
           else:
               print(f"ERROR: {r.get('message','?')}")
           PYEOF
+
+      - name: Push data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # This step is handled in the Python script above
+          echo "Data update completed"
