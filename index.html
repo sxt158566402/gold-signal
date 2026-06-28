@@ -518,6 +518,27 @@ function recordSignal(type, entry, sl, tp) {
   updateStats();
 }
 
+// 检查信号结果（根据当前价格判断止盈或止损）
+function checkSignalResults(currentPrice) {
+  var updated = false;
+  signalHistory.forEach(function(s) {
+    if (s.result !== 'pending') return;
+    if (s.type === 'long') {
+      // 做多：价格>=tp则止盈，价格<=sl则止损
+      if (currentPrice >= s.tp) { s.result = 'win'; updated = true; }
+      else if (currentPrice <= s.sl) { s.result = 'lose'; updated = true; }
+    } else {
+      // 做空：价格<=tp则止盈，价格>=sl则止损
+      if (currentPrice <= s.tp) { s.result = 'win'; updated = true; }
+      else if (currentPrice >= s.sl) { s.result = 'lose'; updated = true; }
+    }
+  });
+  if (updated) {
+    localStorage.setItem('gs_signal_history', JSON.stringify(signalHistory));
+    updateStats();
+  }
+}
+
 function updateStats() {
   var total = signalHistory.length;
   var wins = signalHistory.filter(function(s) { return s.result === 'win'; }).length;
@@ -648,6 +669,9 @@ try{
   document.getElementById('l24').textContent = '$' + f(t.lowPrice);
   document.getElementById('rng').textContent = '$' + f(t.highPrice - t.lowPrice);
   
+  // 检查信号结果
+  checkSignalResults(p);
+  
   lastTs = d.timestamp;
   var age = Math.floor((Date.now() - d.timestamp) / 1000);
   var status = age < 90 ? '✅ 實時' : '⚠️ 延遲 ' + age + '秒';
@@ -682,6 +706,8 @@ try{
         sp('做多信號！進場價' + f(s.price) + '，記得止損！'); vb();
       }
       lastSignal = 'long';
+      // 记录信号
+      recordSignal('long', s.price, s.price - 3, s.price + 6);
     }
   } else if(s.signal === 'short'){
     document.getElementById('ss').classList.remove('hid');
@@ -695,6 +721,8 @@ try{
         sp('做空信號！進場價' + f(s.price) + '，記得止損！'); vb();
       }
       lastSignal = 'short';
+      // 记录信号
+      recordSignal('short', s.price, s.price + 3, s.price - 6);
     }
   } else {
     document.getElementById('sw').classList.remove('hid');
