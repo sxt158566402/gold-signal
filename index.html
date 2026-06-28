@@ -396,7 +396,7 @@ async function loadChart(period) {
     // period: '1h'=1小时K线24根, '4h'=4小时K线30根
     var interval = period === '1h' ? '1h' : '4h';
     var limit = period === '1h' ? 24 : 30;
-    var r = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=' + interval + '&limit=' + limit, {cache: 'no-store'});
+    var r = await fetch('https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=' + interval + '&limit=' + limit, {cache: 'no-store'});
     var data = await r.json();
     console.log('获取到K线数据:', data.length, '根');
     if (debugDiv) debugDiv.textContent = '获取到' + data.length + '根数据';
