@@ -240,6 +240,54 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div class="ii"><div class="n">BB下軌</div><div class="v" id="iL">--</div></div>
 </div>
 </section>
+
+<!-- 国际新闻与重大数据 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,215,0,.02));border:1px solid rgba(255,215,0,.2);border-radius:12px;margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📰</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#FFD700">国际新闻与重大数据</div>
+<div style="font-size:11px;color:#888">影响黄金波动的关键事件</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px">
+<div style="min-width:140px;padding:12px;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#ff4757;font-weight:700;margin-bottom:6px">🔴 非农数据</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每月第一个周五<br>美国劳工部公布<br>影响：⭐⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(255,165,0,.1);border:1px solid rgba(255,165,0,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#FFA500;font-weight:700;margin-bottom:6px">🟠 CPI通胀数据</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每月中旬公布<br>美国劳工部<br>影响：⭐⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(138,43,226,.1);border:1px solid rgba(138,43,226,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#9b59b6;font-weight:700;margin-bottom:6px">🟣 美联储利率</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每6周一次<br>FOMC会议<br>影响：⭐⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(46,213,115,.1);border:1px solid rgba(46,213,115,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#2ed573;font-weight:700;margin-bottom:6px">🟢 GDP数据</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每季度公布<br>经济总量指标<br>影响：⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(30,144,255,.1);border:1px solid rgba(30,144,255,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#1e90ff;font-weight:700;margin-bottom:6px">🔵 失业率</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每月第一个周五<br>与非农同时公布<br>影响：⭐⭐⭐⭐</div>
+</div>
+</div>
+</div>
+
+<div style="padding:16px;background:linear-gradient(135deg,rgba(138,43,226,.08),rgba(138,43,226,.02));border:1px solid rgba(138,43,226,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#9b59b6,#6c3483);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">🌐</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#9b59b6">本周重点关注</div>
+<div style="font-size:11px;color:#888">实时更新的经济日历</div>
+</div>
+</div>
+<div id="weekNewsList" style="font-size:12px;color:#e8e8f0;line-height:1.6">
+<div style="text-align:center;padding:20px;color:#888">加载中...</div>
+</div>
+</div>
+</section>
 <script>
 /* ===== 用户登录验证 ===== */
 var REPO='sxt158566402/gold-signal';
@@ -591,6 +639,43 @@ function showFortuneResult(fortune) {
   if(fortune.lacking.length > 0) html += '<div style="font-size:11px;color:#888;margin-top:6px">命中缺：' + fortune.lacking.join('、') + '</div>';
   document.getElementById('fortuneText').innerHTML = html;
 }
+
+// 加载本周经济数据
+async function loadWeekNews() {
+  try {
+    var r = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json?t=' + Date.now(), {cache: 'no-store'});
+    var data = await r.json();
+    var highImpact = data.filter(function(item) {
+      return item.impact === 'High' && ['USD', 'EUR', 'GBP', 'CNY'].indexOf(item.country) !== -1;
+    });
+    var container = document.getElementById('weekNewsList');
+    if (!container) return;
+    if (highImpact.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:16px;color:#2ed573;font-weight:700">✅ 本周无重大数据，市场相对平稳</div>';
+      return;
+    }
+    var html = '';
+    highImpact.forEach(function(item) {
+      var dateStr = item.date || '';
+      var title = item.title || '';
+      var country = item.country || '';
+      var flag = country === 'USD' ? '🇺🇸' : country === 'EUR' ? '🇪🇺' : country === 'GBP' ? '🇬🇧' : '🇨🇳';
+      var color = '#ff4757';
+      html += '<div style="padding:10px 12px;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.2);border-radius:8px;margin-bottom:8px">';
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+      html += '<span style="font-size:14px">' + flag + '</span>';
+      html += '<span style="font-size:12px;font-weight:700;color:' + color + '">' + title + '</span>';
+      html += '</div>';
+      html += '<div style="font-size:11px;color:#888">' + dateStr + ' | ' + country + '</div>';
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  } catch(e) {
+    var container = document.getElementById('weekNewsList');
+    if (container) container.innerHTML = '<div style="text-align:center;padding:16px;color:#888">暂无数据</div>';
+  }
+}
+loadWeekNews();
 
 document.addEventListener('DOMContentLoaded', function() {
   var saved = localStorage.getItem('gs_fortune');
