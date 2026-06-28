@@ -1,40 +1,11 @@
 {
-  "ticker": {
-    "symbol": "PAXGUSDT",
-    "priceChange": "-11.53000000",
-    "priceChangePercent": "-0.283",
-    "weightedAvgPrice": "4074.20940225",
-    "prevClosePrice": "4077.26000000",
-    "lastPrice": "4065.73000000",
-    "lastQty": "0.11990000",
-    "bidPrice": "4065.72000000",
-    "bidQty": "1.07260000",
-    "askPrice": "4065.73000000",
-    "askQty": "0.15990000",
-    "openPrice": "4077.26000000",
-    "highPrice": "4081.64000000",
-    "lowPrice": "4050.73000000",
-    "volume": "1287.68500000",
-    "quoteVolume": "5246298.33414200",
-    "openTime": 1782601790738,
-    "closeTime": 1782688190738,
-    "firstId": 48638453,
-    "lastId": 48664622,
-    "count": 26170
-  },
+  "ticker": {"lastPrice": "4056.94"},
   "klines": [],
   "strategy": {
     "signal": "waiting",
-    "price": 4065.73,
-    "reason": "\u76e3\u63a7\u4e2d",
-    "indicators": {
-      "rsi": 50,
-      "ema7": 4065.73,
-      "ema25": 4065.73,
-      "bbUpper": 4065.73,
-      "bbMiddle": 4065.73,
-      "bbLower": 4065.73
-    }
+    "price": 4056.94,
+    "reason": "監控中",
+    "indicators": {"rsi": 50, "ema7": 4056.94, "ema25": 4056.94, "bbUpper": 4056.94, "bbMiddle": 4056.94, "bbLower": 4056.94}
   },
-  "timestamp": 1782688191529
+  "timestamp": 1782688210000
 }
