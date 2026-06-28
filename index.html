@@ -140,8 +140,58 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div style="font-size:16px;font-weight:700;color:#9b59b6;margin-top:8px">请输入您的信息</div>
 </div>
 <input type="text" id="fortuneName" placeholder="姓名" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:10px;outline:none">
-<input type="date" id="fortuneBirth" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:10px;outline:none">
-<select id="fortuneTime" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:16px;outline:none">
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<input type="number" id="fortuneYear" placeholder="年（如1990）" min="1900" max="2030" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;outline:none">
+<select id="fortuneMonth" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;outline:none">
+<option value="">月</option>
+<option value="1">正月</option>
+<option value="2">二月</option>
+<option value="3">三月</option>
+<option value="4">四月</option>
+<option value="5">五月</option>
+<option value="6">六月</option>
+<option value="7">七月</option>
+<option value="8">八月</option>
+<option value="9">九月</option>
+<option value="10">十月</option>
+<option value="11">冬月</option>
+<option value="12">腊月</option>
+</select>
+<select id="fortuneDay" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;outline:none">
+<option value="">日</option>
+<option value="1">初一</option>
+<option value="2">初二</option>
+<option value="3">初三</option>
+<option value="4">初四</option>
+<option value="5">初五</option>
+<option value="6">初六</option>
+<option value="7">初七</option>
+<option value="8">初八</option>
+<option value="9">初九</option>
+<option value="10">初十</option>
+<option value="11">十一</option>
+<option value="12">十二</option>
+<option value="13">十三</option>
+<option value="14">十四</option>
+<option value="15">十五</option>
+<option value="16">十六</option>
+<option value="17">十七</option>
+<option value="18">十八</option>
+<option value="19">十九</option>
+<option value="20">二十</option>
+<option value="21">廿一</option>
+<option value="22">廿二</option>
+<option value="23">廿三</option>
+<option value="24">廿四</option>
+<option value="25">廿五</option>
+<option value="26">廿六</option>
+<option value="27">廿七</option>
+<option value="28">廿八</option>
+<option value="29">廿九</option>
+<option value="30">三十</option>
+</select>
+</div>
+<select id="fortuneTime" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:10px;outline:none">
 <option value="">请选择出生时段</option>
 <option value="zi">子时 (23:00-01:00)</option>
 <option value="chou">丑时 (01:00-03:00)</option>
@@ -156,6 +206,9 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <option value="xu">戌时 (19:00-21:00)</option>
 <option value="hai">亥时 (21:00-23:00)</option>
 </select>
+<div style="font-size:11px;color:#2ed573;background:rgba(46,213,115,.1);padding:8px 12px;border-radius:6px;margin-bottom:14px;line-height:1.5">
+🔒 温馨提示：您的信息仅保存在手机本地，不会上传到任何服务器，请放心填写。
+</div>
 <div style="display:flex;gap:10px">
 <button onclick="closeFortuneModal()" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:transparent;color:#888;font-size:14px;cursor:pointer">取消</button>
 <button onclick="calcFortune()" style="flex:1;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#9b59b6,#6c3483);color:#fff;font-size:14px;font-weight:700;cursor:pointer">开始算命</button>
@@ -498,7 +551,9 @@ function showFortuneModal() {
   var saved = localStorage.getItem('gs_fortune');
   if(saved) { var data = JSON.parse(saved);
     document.getElementById('fortuneName').value = data.name || '';
-    document.getElementById('fortuneBirth').value = data.birth || '';
+    document.getElementById('fortuneYear').value = data.year || '';
+    document.getElementById('fortuneMonth').value = data.month || '';
+    document.getElementById('fortuneDay').value = data.day || '';
     document.getElementById('fortuneTime').value = data.time || '';
   }
 }
@@ -506,17 +561,20 @@ function closeFortuneModal() { document.getElementById('fortuneModal').style.dis
 
 function calcFortune() {
   var name = document.getElementById('fortuneName').value.trim();
-  var birth = document.getElementById('fortuneBirth').value;
+  var year = parseInt(document.getElementById('fortuneYear').value);
+  var month = parseInt(document.getElementById('fortuneMonth').value);
+  var day = parseInt(document.getElementById('fortuneDay').value);
   var time = document.getElementById('fortuneTime').value;
   if(!name) { alert('请输入姓名'); return; }
-  if(!birth) { alert('请输入出生日期'); return; }
+  if(!year || year < 1900 || year > 2030) { alert('请输入有效年份（1900-2030）'); return; }
+  if(!month) { alert('请选择农历月份'); return; }
+  if(!day) { alert('请选择农历日期'); return; }
   if(!time) { alert('请选择出生时段'); return; }
-  var parts = birth.split('-');
-  var year = parseInt(parts[0]), month = parseInt(parts[1]), day = parseInt(parts[2]);
+  // 农历直接作为八字输入（简化算法，假设用户输入的是农历）
   var bazi = { year: getYearGanZhi(year), month: getMonthGanZhi(year, month),
     day: getDayGanZhi(year, month, day), hour: { gan: '?', zhi: getHourZhi(time) }, yearZhiIdx: (year - 4) % 12 };
   var fortune = calcDailyFortune(bazi, name);
-  localStorage.setItem('gs_fortune', JSON.stringify({ name: name, birth: birth, time: time, lastCalc: Date.now(), result: fortune }));
+  localStorage.setItem('gs_fortune', JSON.stringify({ name: name, year: year, month: month, day: day, time: time, lastCalc: Date.now(), result: fortune }));
   showFortuneResult(fortune);
   if(fortune.level === '凶') isRiskDay = true;
   closeFortuneModal();
