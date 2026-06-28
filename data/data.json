@@ -1,39 +1,39 @@
 {
   "ticker": {
     "symbol": "PAXGUSDT",
-    "priceChange": "-3.30000000",
-    "priceChangePercent": "-0.081",
-    "weightedAvgPrice": "4075.87598111",
-    "prevClosePrice": "4076.65000000",
-    "lastPrice": "4073.35000000",
-    "lastQty": "1.67880000",
-    "bidPrice": "4073.35000000",
-    "bidQty": "0.27070000",
-    "askPrice": "4073.36000000",
-    "askQty": "0.48850000",
-    "openPrice": "4076.65000000",
+    "priceChange": "-3.04000000",
+    "priceChangePercent": "-0.075",
+    "weightedAvgPrice": "4075.87134907",
+    "prevClosePrice": "4076.34000000",
+    "lastPrice": "4073.30000000",
+    "lastQty": "0.91560000",
+    "bidPrice": "4073.30000000",
+    "bidQty": "0.14790000",
+    "askPrice": "4073.31000000",
+    "askQty": "1.38230000",
+    "openPrice": "4076.34000000",
     "highPrice": "4081.03000000",
     "lowPrice": "4070.89000000",
-    "volume": "769.42140000",
-    "quoteVolume": "3136066.20361200",
-    "openTime": 1782582154772,
-    "closeTime": 1782668554772,
-    "firstId": 48635607,
-    "lastId": 48653640,
-    "count": 18034
+    "volume": "770.36190000",
+    "quoteVolume": "3139895.99662400",
+    "openTime": 1782582210773,
+    "closeTime": 1782668610773,
+    "firstId": 48635622,
+    "lastId": 48653668,
+    "count": 18047
   },
   "strategy": {
     "signal": "waiting",
-    "price": 4073.35,
+    "price": 4073.3,
     "reason": "監控中",
     "indicators": {
-      "rsi": 51.87,
-      "ema7": 4073.35,
-      "ema25": 4073.77,
+      "rsi": 51.64,
+      "ema7": 4073.34,
+      "ema25": 4073.76,
       "bbUpper": 4075,
       "bbMiddle": 4073.62,
       "bbLower": 4072.23
     }
   },
-  "timestamp": 1782668556915
+  "timestamp": 1782668611995
 }
