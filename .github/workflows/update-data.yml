@@ -15,18 +15,15 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Fetch Binance data
+      - name: Update data
         run: python3 scripts/update-data.py
-        working-directory: .
 
-      - name: Push updated data
+      - name: Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/data.json
-          if git diff --cached --quiet; then
-            echo "No changes"
-          else
+          if ! git diff --cached --quiet; then
             git commit -m "update data $(date -u +%H:%M:%S)"
             git push
           fi
