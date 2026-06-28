@@ -1,1 +1,1002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>GoldSniper</title>
+<!-- 用户登录覆盖层 -->
+<style>
+#loginOverlay{position:fixed;inset:0;background:#0a0a0f;z-index:999;display:flex;align-items:center;justify-content:center}
+#loginOverlay .box{text-align:center;padding:40px 30px;max-width:380px;width:90%}
+#loginOverlay .logo{font-size:40px;margin-bottom:8px}
+#loginOverlay h2{color:#FFD700;font-size:22px;margin-bottom:4px}
+#loginOverlay p{color:#888;font-size:13px;margin-bottom:24px}
+#loginOverlay .field{width:100%;padding:14px;border:1px solid #2a2a35;border-radius:10px;background:#12121a;color:#e8e8f0;font-size:15px;text-align:center;margin-bottom:12px;outline:none}
+#loginOverlay .field:focus{border-color:#FFD700}
+#loginOverlay .errmsg{color:#ff4757;font-size:12px;margin-bottom:8px;min-height:16px}
+#loginOverlay .lbtn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#FFD700,#b8960f);color:#000}
+#loginOverlay .lbtn:active{opacity:.8}
+#loginOverlay .expire-note{margin-top:16px;font-size:11px;color:#555}
+#mainContent{display:none}
+.authed{display:block!important}
+</style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-height:100vh}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#12121a;border-bottom:1px solid #2a2a35;position:sticky;top:0;z-index:100}
+.logo{font-weight:700;color:#FFD700;font-size:16px}
+.conn{font-size:12px;color:#888;display:flex;align-items:center;gap:6px}
+.conn .dot{width:8px;height:8px;border-radius:50%;background:#666}
+.conn.ok .dot{background:#2ed573;box-shadow:0 0 6px #2ed573}
+.conn.warn .dot{background:#ffa502;box-shadow:0 0 6px #ffa502}
+.conn.err .dot{background:#ff4757;box-shadow:0 0 6px #ff4757}
+.offline-bar{background:#ff4757;color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:700;display:none}
+.offline-bar.show{display:block}
+.hero{text-align:center;padding:30px 16px 20px;background:linear-gradient(180deg,#12121a,#0a0a0f)}
+.hero .label{font-size:13px;color:#888;margin-bottom:4px}
+.hero .price{font-size:52px;font-weight:800;color:#FFD700;line-height:1.1}
+.hero .chg{margin-top:8px;font-size:14px;display:flex;justify-content:center;gap:12px}
+.up{color:#2ed573}.down{color:#ff4757}
+.ranges{display:flex;justify-content:center;gap:24px;margin-top:16px}
+.ranges .it{text-align:center}
+.ranges .it .l{display:block;font-size:11px;color:#666}
+.ranges .it .v{font-size:14px;font-weight:700}
+.time{font-size:11px;color:#555;margin-top:12px}
+.sig{padding:16px}
+.wait{text-align:center;padding:40px 20px;color:#666}
+.card{border-radius:12px;padding:20px;margin:0 auto 16px;max-width:400px;animation:fi .5s}
+.card.long{background:linear-gradient(135deg,rgba(46,213,115,.15),rgba(46,213,115,.05));border:1px solid rgba(46,213,115,.3)}
+.card.short{background:linear-gradient(135deg,rgba(255,71,87,.15),rgba(255,71,87,.05));border:1px solid rgba(255,71,87,.3)}
+.card .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.badge{padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700}
+.badge.long{background:#2ed573;color:#000}
+.badge.short{background:#ff4757;color:#fff}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.row:last-child{border:none}
+.row .l{color:#aaa;font-size:13px}
+.row .v{font-weight:700;font-size:15px}
+.row.m .v{color:#FFD700;font-size:18px}
+.sl{color:#ff4757!important}.tp{color:#2ed573!important}
+.reason{margin-top:12px;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;font-size:12px;color:#aaa;line-height:1.5}
+.ind{padding:16px}
+.ind .t{font-size:14px;font-weight:700;color:#FFD700;margin-bottom:12px}
+.ig{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ii{background:#12121a;border:1px solid #2a2a35;border-radius:8px;padding:12px 8px;text-align:center}
+.ii .n{font-size:11px;color:#888;margin-bottom:4px}
+.ii .v{font-size:14px;font-weight:700}
+.ov{color:#2ed573}.ob{color:#ff4757}
+.ap{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center}
+.api{text-align:center;padding:40px}
+.api p{color:#e8e8f0;margin-bottom:8px}
+.api .s{font-size:13px;color:#888}
+.abtn{margin-top:20px;padding:14px 32px;background:linear-gradient(135deg,#FFD700,#b8960f);color:#000;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+.hid{display:none!important}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.5}}
+.pu{animation:pu 2s infinite}
+@media(max-width:380px){.hero .price{font-size:40px}.ig{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<!-- 登录层 -->
+<div id="loginOverlay">
+<div class="box">
+<div class="logo">⚡</div>
+<h2>GoldSniper</h2>
+<p>PAXG 黃金信號系統</p>
+<input type="email" class="field" id="uEmail" placeholder="郵箱">
+<input type="password" class="field" id="uPw" placeholder="密碼" onkeydown="if(event.key==='Enter')doUserLogin()">
+<div class="errmsg" id="uErr"></div>
+<button class="lbtn" onclick="doUserLogin()">登入</button>
+<div class="expire-note">需要帳號請聯繫管理員開通</div>
+</div>
+</div>
+<!-- 主内容 -->
+<div id="mainContent">
+<div class="ap" id="ap"><div class="api">
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+<p style="font-size:18px;font-weight:700">點擊啟用語音提醒</p>
+<p class="s">信號觸發時語音播報：「可以下單了，記得止損！」</p>
+<button class="abtn" onclick="ea()">🔊 啟用喇叭提醒</button>
+</div></div>
+<div class="offline-bar" id="offbar"></div>
+<header class="bar"><div class="logo">⚡ GoldSniper</div><div class="conn" id="cs"><span class="dot"></span><span class="t">連接中...</span></div></header>
+<section class="hero">
+<div class="label">PAXG (黃金) 實時價格</div>
+<div class="price" id="mp">----</div>
+<div class="chg"><span id="cv">--</span><span id="cp">--</span></div>
+<div class="ranges">
+<div class="it"><span class="l">24h高</span><span class="v" id="h24">--</span></div>
+<div class="it"><span class="l">24h低</span><span class="v" id="l24">--</span></div>
+<div class="it"><span class="l">波幅</span><span class="v" id="rng">--</span></div>
+</div>
+<div class="time" id="dt"></div>
+</section>
+<section class="sig">
+<div class="wait" id="sw"><div class="pu" style="font-size:48px;margin-bottom:12px">⏳</div><p style="font-size:16px;font-weight:700">等待信號中...</p><p style="font-size:13px;color:#555;margin-top:6px">系統監控中，大漲大跌後企穩會自動提示</p></div>
+<div class="card long hid" id="ls"><div class="hd"><span class="badge long">📈 做多</span><span id="lt"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="le">--</span></div><div class="row"><span class="l">止損 (-10)</span><span class="v sl" id="lsl">--</span></div><div class="row"><span class="l">止盈 (+10)</span><span class="v tp" id="ltp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="lr"></div></div>
+<div class="card short hid" id="ss"><div class="hd"><span class="badge short">📉 做空</span><span id="st"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="se">--</span></div><div class="row"><span class="l">止損 (+10)</span><span class="v sl" id="ssl">--</span></div><div class="row"><span class="l">止盈 (-10)</span><span class="v tp" id="stp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="sr"></div></div>
+</section>
+<!-- 今日运势区域 -->
+<div id="fortuneSection" style="margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(138,43,226,.15),rgba(138,43,226,.05));border:1px solid rgba(138,43,226,.3);border-radius:10px;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<div style="font-size:14px;font-weight:700;color:#9b59b6">🔮 今日运势</div>
+<button id="fortuneBtn" onclick="showFortuneModal()" style="padding:6px 12px;background:rgba(138,43,226,.3);border:1px solid rgba(138,43,226,.5);border-radius:6px;color:#e8e8f0;font-size:12px;cursor:pointer">点击查看</button>
+</div>
+<div id="fortuneResult" style="display:none">
+<div style="text-align:center;margin-bottom:10px">
+<img src="generated-images/img-1782666596716-bk3krj.png" style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(138,43,226,.5);margin-bottom:8px">
+</div>
+<div id="fortuneText" style="font-size:13px;color:#e8e8f0;line-height:1.6;text-align:center"></div>
+</div>
+<div id="fortuneEmpty" style="font-size:12px;color:#888;text-align:center">输入生辰八字，查看今日运势</div>
+</div>
 
+<!-- 运势输入弹窗 -->
+<div id="fortuneModal" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:none;align-items:center;justify-content:center">
+<div style="background:#12121a;border:1px solid #2a2a35;border-radius:16px;padding:24px;max-width:360px;width:90%">
+<div style="text-align:center;margin-bottom:16px">
+<img src="generated-images/img-1782666596716-bk3krj.png" style="width:100px;height:100px;border-radius:50%;border:2px solid rgba(138,43,226,.5)">
+<div style="font-size:16px;font-weight:700;color:#9b59b6;margin-top:8px">请输入您的信息</div>
+</div>
+<input type="text" id="fortuneName" placeholder="姓名" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:10px;outline:none">
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<input type="number" id="fortuneYear" placeholder="年（如1990）" min="1900" max="2030" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;outline:none">
+<select id="fortuneMonth" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;outline:none">
+<option value="">月</option>
+<option value="1">正月</option>
+<option value="2">二月</option>
+<option value="3">三月</option>
+<option value="4">四月</option>
+<option value="5">五月</option>
+<option value="6">六月</option>
+<option value="7">七月</option>
+<option value="8">八月</option>
+<option value="9">九月</option>
+<option value="10">十月</option>
+<option value="11">冬月</option>
+<option value="12">腊月</option>
+</select>
+<select id="fortuneDay" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;outline:none">
+<option value="">日</option>
+<option value="1">初一</option>
+<option value="2">初二</option>
+<option value="3">初三</option>
+<option value="4">初四</option>
+<option value="5">初五</option>
+<option value="6">初六</option>
+<option value="7">初七</option>
+<option value="8">初八</option>
+<option value="9">初九</option>
+<option value="10">初十</option>
+<option value="11">十一</option>
+<option value="12">十二</option>
+<option value="13">十三</option>
+<option value="14">十四</option>
+<option value="15">十五</option>
+<option value="16">十六</option>
+<option value="17">十七</option>
+<option value="18">十八</option>
+<option value="19">十九</option>
+<option value="20">二十</option>
+<option value="21">廿一</option>
+<option value="22">廿二</option>
+<option value="23">廿三</option>
+<option value="24">廿四</option>
+<option value="25">廿五</option>
+<option value="26">廿六</option>
+<option value="27">廿七</option>
+<option value="28">廿八</option>
+<option value="29">廿九</option>
+<option value="30">三十</option>
+</select>
+</div>
+<select id="fortuneTime" style="width:100%;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:#0a0a0f;color:#e8e8f0;font-size:14px;margin-bottom:10px;outline:none">
+<option value="">请选择出生时段</option>
+<option value="zi">子时 (23:00-01:00)</option>
+<option value="chou">丑时 (01:00-03:00)</option>
+<option value="yin">寅时 (03:00-05:00)</option>
+<option value="mao">卯时 (05:00-07:00)</option>
+<option value="chen">辰时 (07:00-09:00)</option>
+<option value="si">巳时 (09:00-11:00)</option>
+<option value="wu">午时 (11:00-13:00)</option>
+<option value="wei">未时 (13:00-15:00)</option>
+<option value="shen">申时 (15:00-17:00)</option>
+<option value="you">酉时 (17:00-19:00)</option>
+<option value="xu">戌时 (19:00-21:00)</option>
+<option value="hai">亥时 (21:00-23:00)</option>
+</select>
+<div style="font-size:11px;color:#2ed573;background:rgba(46,213,115,.1);padding:8px 12px;border-radius:6px;margin-bottom:14px;line-height:1.5">
+🔒 温馨提示：您的信息仅保存在手机本地，不会上传到任何服务器，请放心填写。
+</div>
+<div style="display:flex;gap:10px">
+<button onclick="closeFortuneModal()" style="flex:1;padding:12px;border:1px solid #2a2a35;border-radius:8px;background:transparent;color:#888;font-size:14px;cursor:pointer">取消</button>
+<button onclick="calcFortune()" style="flex:1;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#9b59b6,#6c3483);color:#fff;font-size:14px;font-weight:700;cursor:pointer">开始算命</button>
+</div>
+</div>
+</div>
+
+<!-- 风险提醒区域 -->
+<div id="riskAlert" style="display:none;margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(255,71,87,.15),rgba(255,71,87,.05));border:1px solid rgba(255,71,87,.3);border-radius:10px;">
+<div style="font-size:14px;font-weight:700;color:#ff4757;margin-bottom:8px">⚠️ 高风险提醒</div>
+<div id="riskContent" style="font-size:13px;color:#e8e8f0;line-height:1.6"></div>
+</div>
+<div style="margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(255,215,0,.12),rgba(255,215,0,.04));border:1px solid rgba(255,215,0,.3);border-radius:10px;text-align:center">
+<div style="font-size:14px;font-weight:700;color:#FFD700;margin-bottom:6px">⚠️ 風控提醒</div>
+<div style="font-size:13px;color:#e8e8f0;line-height:1.6">
+止損 <span style="color:#ff4757;font-weight:700">10</span> 點 ｜ 止盈 <span style="color:#2ed573;font-weight:700">10</span> 點（推動止盈）<br>
+100 美金控制在 <span style="color:#FFD700;font-weight:700">0.01</span> 手<br>
+<span style="color:#888;font-size:11px">輕倉操作，嚴格止損，切勿重倉賭單！</span>
+</div>
+</div>
+<section class="ind">
+<div class="t">📊 技術指標</div>
+<div class="ig">
+<div class="ii"><div class="n">RSI(14)</div><div class="v" id="iR">--</div></div>
+<div class="ii"><div class="n">EMA7</div><div class="v" id="i7">--</div></div>
+<div class="ii"><div class="n">EMA25</div><div class="v" id="i2">--</div></div>
+<div class="ii"><div class="n">BB上軌</div><div class="v" id="iU">--</div></div>
+<div class="ii"><div class="n">BB中軌</div><div class="v" id="iM">--</div></div>
+<div class="ii"><div class="n">BB下軌</div><div class="v" id="iL">--</div></div>
+</div>
+</section>
+
+<!-- 国际新闻与重大数据 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,215,0,.02));border:1px solid rgba(255,215,0,.2);border-radius:12px;margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📰</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#FFD700">国际新闻与重大数据</div>
+<div style="font-size:11px;color:#888">影响黄金波动的关键事件</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px">
+<div style="min-width:140px;padding:12px;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#ff4757;font-weight:700;margin-bottom:6px">🔴 非农数据</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每月第一个周五<br>美国劳工部公布<br>影响：⭐⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(255,165,0,.1);border:1px solid rgba(255,165,0,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#FFA500;font-weight:700;margin-bottom:6px">🟠 CPI通胀数据</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每月中旬公布<br>美国劳工部<br>影响：⭐⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(138,43,226,.1);border:1px solid rgba(138,43,226,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#9b59b6;font-weight:700;margin-bottom:6px">🟣 美联储利率</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每6周一次<br>FOMC会议<br>影响：⭐⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(46,213,115,.1);border:1px solid rgba(46,213,115,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#2ed573;font-weight:700;margin-bottom:6px">🟢 GDP数据</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每季度公布<br>经济总量指标<br>影响：⭐⭐⭐⭐</div>
+</div>
+<div style="min-width:140px;padding:12px;background:rgba(30,144,255,.1);border:1px solid rgba(30,144,255,.3);border-radius:10px;flex-shrink:0">
+<div style="font-size:11px;color:#1e90ff;font-weight:700;margin-bottom:6px">🔵 失业率</div>
+<div style="font-size:11px;color:#888;line-height:1.4">每月第一个周五<br>与非农同时公布<br>影响：⭐⭐⭐⭐</div>
+</div>
+</div>
+</div>
+
+<div style="padding:16px;background:linear-gradient(135deg,rgba(138,43,226,.08),rgba(138,43,226,.02));border:1px solid rgba(138,43,226,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#9b59b6,#6c3483);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">🌐</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#9b59b6">本周重点关注</div>
+<div style="font-size:11px;color:#888">实时更新的经济日历</div>
+</div>
+</div>
+<div id="weekNewsList" style="font-size:12px;color:#e8e8f0;line-height:1.6">
+<div style="text-align:center;padding:20px;color:#888">加载中...</div>
+</div>
+</div>
+</section>
+
+<!-- 金价走势图 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(30,144,255,.08),rgba(30,144,255,.02));border:1px solid rgba(30,144,255,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#1e90ff,#0066cc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📈</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#1e90ff">金价走势图</div>
+<div style="font-size:11px;color:#888">PAXG/USDT 1小时K线</div>
+</div>
+<div style="margin-left:auto;display:flex;gap:6px">
+<button onclick="loadChart('1h')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.4);border:1px solid rgba(30,144,255,.6);border-radius:4px;color:#fff;cursor:pointer">1小时</button>
+<button onclick="loadChart('4h')" class="chart-btn" style="padding:4px 8px;font-size:10px;background:rgba(30,144,255,.2);border:1px solid rgba(30,144,255,.4);border-radius:4px;color:#1e90ff;cursor:pointer">4小时</button>
+</div>
+</div>
+<div style="position:relative;height:200px;background:rgba(0,0,0,.3);border-radius:8px;padding:10px;width:100%;box-sizing:border-box">
+<canvas id="priceChart" style="width:100%;height:100%"></canvas>
+<div id="chartDebug" style="position:absolute;bottom:5px;left:5px;color:#FFD700;font-size:10px;background:rgba(0,0,0,.5);padding:4px 8px;border-radius:4px">加载中...</div>
+</div>
+</div>
+</section>
+
+<!-- 仓位计算器 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,215,0,.02));border:1px solid rgba(255,215,0,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">🧮</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#FFD700">仓位计算器</div>
+<div style="font-size:11px;color:#888">科学管理你的仓位</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">账户资金($)</div>
+<input type="number" id="calcBalance" placeholder="1000" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">风险比例(%)</div>
+<input type="number" id="calcRisk" placeholder="1" value="1" min="0.1" max="5" step="0.1" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">止损点数</div>
+<input type="number" id="calcSL" placeholder="10" value="10" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">当前价格</div>
+<input type="number" id="calcPrice" placeholder="3300" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+</div>
+</div>
+<button onclick="calcPosition()" style="width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">计算建议仓位</button>
+<div id="calcResult" style="display:none;padding:12px;background:rgba(46,213,115,.1);border:1px solid rgba(46,213,115,.3);border-radius:8px">
+<div style="font-size:13px;color:#2ed573;font-weight:700;margin-bottom:8px">📊 计算结果</div>
+<div id="calcResultText" style="font-size:12px;color:#e8e8f0;line-height:1.6"></div>
+</div>
+</div>
+</section>
+
+<!-- 历史信号统计 -->
+<section style="margin:16px;padding:0;background:transparent">
+<div style="padding:16px;background:linear-gradient(135deg,rgba(46,213,115,.08),rgba(46,213,115,.02));border:1px solid rgba(46,213,115,.2);border-radius:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:36px;height:36px;background:linear-gradient(135deg,#2ed573,#1e90ff);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📊</div>
+<div>
+<div style="font-size:15px;font-weight:700;color:#2ed573">历史信号统计</div>
+<div style="font-size:11px;color:#888">信号胜率分析</div>
+</div>
+</div>
+<div style="display:flex;gap:12px;margin-bottom:12px">
+<div style="flex:1;text-align:center;padding:12px;background:rgba(46,213,115,.1);border-radius:8px">
+<div style="font-size:20px;font-weight:700;color:#2ed573" id="statTotal">0</div>
+<div style="font-size:11px;color:#888">总信号数</div>
+</div>
+<div style="flex:1;text-align:center;padding:12px;background:rgba(46,213,115,.1);border-radius:8px">
+<div style="font-size:20px;font-weight:700;color:#2ed573" id="statWin">0%</div>
+<div style="font-size:11px;color:#888">总胜率</div>
+</div>
+</div>
+<div style="display:flex;gap:12px">
+<div style="flex:1;text-align:center;padding:12px;background:rgba(46,213,115,.1);border-radius:8px">
+<div style="font-size:18px;font-weight:700;color:#2ed573" id="statLong">0%</div>
+<div style="font-size:11px;color:#888">做多胜率</div>
+</div>
+<div style="flex:1;text-align:center;padding:12px;background:rgba(255,71,87,.1);border-radius:8px">
+<div style="font-size:18px;font-weight:700;color:#ff4757" id="statShort">0%</div>
+<div style="font-size:11px;color:#888">做空胜率</div>
+</div>
+</div>
+</div>
+</section>
+
+<script>
+/* ===== 金价K线图 ===== */
+var chartData = [];
+
+async function loadChart(period) {
+  var debugDiv = document.getElementById('chartDebug');
+  if (debugDiv) debugDiv.textContent = '加载中...';
+  var limit = period === '1h' ? 24 : 30;
+  // 只从 data.json 读取（GitHub Actions 每2分钟更新）
+  // 不直接调 Binance API，避免国内无法访问
+  var r = await fetch('data/data.json?t=' + Date.now(), {cache: 'no-store'});
+  var data = await r.json();
+  if (data.klines && data.klines.length > 0) {
+    chartData = data.klines.slice(-limit);
+    if (debugDiv) debugDiv.textContent = chartData.length + '根K线';
+    drawKlineChart();
+  } else {
+    if (debugDiv) debugDiv.textContent = 'K线数据更新中，请稍后刷新';
+  }
+}
+
+function drawKlineChart() {
+  var canvas = document.getElementById('priceChart');
+  var debugDiv = document.getElementById('chartDebug');
+  if (!canvas) {
+    console.log('找不到Canvas元素');
+    if (debugDiv) debugDiv.textContent = '找不到Canvas';
+    return;
+  }
+  var ctx = canvas.getContext('2d');
+  
+  // 等待DOM渲染完成
+  setTimeout(function() {
+    console.log('开始绘制K线图...');
+    if (debugDiv) debugDiv.textContent = '绘制中...';
+    // 获取父容器的宽度
+    var parent = canvas.parentElement;
+    var w = parent.offsetWidth - 20;
+    var h = parent.offsetHeight - 20;
+    console.log('Canvas尺寸:', w, 'x', h);
+    if (w <= 0) w = 300;
+    if (h <= 0) h = 160;
+    canvas.width = w;
+    canvas.height = h;
+    ctx.clearRect(0, 0, w, h);
+    if (chartData.length === 0) {
+      console.log('chartData为空');
+      if (debugDiv) debugDiv.textContent = '无数据';
+      return;
+    }
+    console.log('chartData长度:', chartData.length);
+    if (debugDiv) debugDiv.textContent = chartData.length + '根K线';
+    
+    // 计算价格范围
+    var allPrices = [];
+    chartData.forEach(function(d) {
+      allPrices.push(d.high, d.low);
+    });
+    var min = Math.min.apply(null, allPrices) * 0.998;
+    var max = Math.max.apply(null, allPrices) * 1.002;
+    var range = max - min;
+    
+    // 画网格线
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (var i = 0; i < 5; i++) {
+      var y = (h / 5) * i + 10;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+      var price = max - (range / 5) * i;
+      ctx.fillStyle = '#888';
+      ctx.font = '10px Arial';
+      ctx.fillText(price.toFixed(0), 2, y - 2);
+    }
+    
+    // 画K线
+    var kWidth = Math.max(4, (w / chartData.length) * 0.6);
+    var gap = w / chartData.length;
+    
+    for (var i = 0; i < chartData.length; i++) {
+      var d = chartData[i];
+      var x = gap * i + gap / 2;
+      var isUp = d.close >= d.open;
+      var color = isUp ? '#2ed573' : '#ff4757';
+      
+      var openY = h - ((d.open - min) / range) * (h - 20) - 10;
+      var closeY = h - ((d.close - min) / range) * (h - 20) - 10;
+      var highY = h - ((d.high - min) / range) * (h - 20) - 10;
+      var lowY = h - ((d.low - min) / range) * (h - 20) - 10;
+      
+      // 画影线
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.moveTo(x, highY);
+      ctx.lineTo(x, lowY);
+      ctx.stroke();
+      
+      // 画实体
+      var bodyTop = Math.min(openY, closeY);
+      var bodyHeight = Math.abs(closeY - openY) || 1;
+      ctx.fillStyle = color;
+      ctx.fillRect(x - kWidth / 2, bodyTop, kWidth, bodyHeight);
+    }
+  }, 100);
+}
+
+/* ===== 仓位计算器 ===== */
+function calcPosition() {
+  var balance = parseFloat(document.getElementById('calcBalance').value);
+  var riskPercent = parseFloat(document.getElementById('calcRisk').value);
+  var slPoints = parseFloat(document.getElementById('calcSL').value);
+  var price = parseFloat(document.getElementById('calcPrice').value);
+  
+  if (!balance || !riskPercent || !slPoints || !price) {
+    alert('请填写所有参数');
+    return;
+  }
+  
+  // 计算风险金额
+  var riskAmount = balance * (riskPercent / 100);
+  // PAXG 1点 = $0.01/克，1手=100克，所以1点=$1
+  var pointValue = 1;
+  // 计算建议手数
+  var lots = riskAmount / (slPoints * pointValue);
+  lots = Math.floor(lots * 100) / 100; // 保留2位小数
+  
+  var html = '';
+  html += '<div style="margin-bottom:6px">💰 账户资金: <span style="color:#FFD700;font-weight:700">$' + balance.toFixed(2) + '</span></div>';
+  html += '<div style="margin-bottom:6px">⚠️ 风险金额: <span style="color:#ff4757;font-weight:700">$' + riskAmount.toFixed(2) + '</span> (' + riskPercent + '%)</div>';
+  html += '<div style="margin-bottom:6px">📉 止损点数: <span style="color:#ff4757;font-weight:700">' + slPoints + '点</span></div>';
+  html += '<div style="margin-bottom:6px">📊 建议手数: <span style="color:#2ed573;font-weight:700;font-size:16px">' + lots + '手</span></div>';
+  html += '<div style="font-size:11px;color:#888;margin-top:8px">💡 100美金建议0.01手，严格控制风险！</div>';
+  
+  document.getElementById('calcResultText').innerHTML = html;
+  document.getElementById('calcResult').style.display = 'block';
+}
+
+/* ===== 历史信号统计 ===== */
+var signalHistory = JSON.parse(localStorage.getItem('gs_signal_history') || '[]');
+
+function recordSignal(type, entry, sl, tp) {
+  signalHistory.push({
+    type: type,
+    entry: entry,
+    sl: sl,
+    tp: tp,
+    time: Date.now(),
+    result: 'pending'
+  });
+  localStorage.setItem('gs_signal_history', JSON.stringify(signalHistory));
+  updateStats();
+}
+
+// 检查信号结果（根据当前价格判断止盈或止损）
+function checkSignalResults(currentPrice) {
+  var updated = false;
+  signalHistory.forEach(function(s) {
+    if (s.result !== 'pending') return;
+    if (s.type === 'long') {
+      // 做多：价格>=tp则止盈，价格<=sl则止损
+      if (currentPrice >= s.tp) { s.result = 'win'; updated = true; }
+      else if (currentPrice <= s.sl) { s.result = 'lose'; updated = true; }
+    } else {
+      // 做空：价格<=tp则止盈，价格>=sl则止损
+      if (currentPrice <= s.tp) { s.result = 'win'; updated = true; }
+      else if (currentPrice >= s.sl) { s.result = 'lose'; updated = true; }
+    }
+  });
+  if (updated) {
+    localStorage.setItem('gs_signal_history', JSON.stringify(signalHistory));
+    updateStats();
+  }
+}
+
+function updateStats() {
+  var total = signalHistory.length;
+  var wins = signalHistory.filter(function(s) { return s.result === 'win'; }).length;
+  var longs = signalHistory.filter(function(s) { return s.type === 'long'; });
+  var shorts = signalHistory.filter(function(s) { return s.type === 'short'; });
+  var longWins = longs.filter(function(s) { return s.result === 'win'; }).length;
+  var shortWins = shorts.filter(function(s) { return s.result === 'win'; }).length;
+  
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statWin').textContent = total > 0 ? Math.round(wins / total * 100) + '%' : '0%';
+  document.getElementById('statLong').textContent = longs.length > 0 ? Math.round(longWins / longs.length * 100) + '%' : '0%';
+  document.getElementById('statShort').textContent = shorts.length > 0 ? Math.round(shortWins / shorts.length * 100) + '%' : '0%';
+}
+
+// 初始化加载
+loadChart('1h');
+updateStats();
+
+/* ===== 用户登录验证 ===== */
+var REPO='sxt158566402/gold-signal';
+var currentUser=localStorage.getItem('gs_user');
+
+async function doUserLogin(){
+  var email=document.getElementById('uEmail').value.trim().toLowerCase();
+  var pw=document.getElementById('uPw').value;
+  var err=document.getElementById('uErr');
+  if(!email||!email.includes('@')){err.textContent='請輸入有效郵箱';return;}
+  if(!pw){err.textContent='請輸入密碼';return;}
+  err.textContent='驗證中...';
+  try{
+    var r=await fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'});
+    var users=await r.json();
+    var u=users[email];
+    if(!u){err.textContent='帳號不存在，請聯繫管理員';return;}
+    if(u.password!==pw){err.textContent='密碼錯誤';return;}
+    if(u.expiry!==0&&u.expiry<Date.now()){err.textContent='帳號已過期，請聯繫管理員續期';return;}
+    // 登录成功
+    localStorage.setItem('gs_user',email);
+    localStorage.setItem('gs_user_pw',pw);
+    document.getElementById('loginOverlay').style.display='none';
+    document.getElementById('mainContent').classList.add('authed');
+    startApp();
+    // 登录后加载图表和统计
+    setTimeout(function() { loadChart('1h'); updateStats(); }, 500);
+  }catch(e){err.textContent='網路錯誤，請重試';}
+}
+
+function checkLogin(){
+  if(currentUser){
+    document.getElementById('loginOverlay').style.display='none';
+    document.getElementById('mainContent').classList.add('authed');
+    // 已登录用户，加载图表和统计
+    setTimeout(function() {
+      console.log('开始加载图表...');
+      loadChart('1h');
+      updateStats();
+    }, 1000);
+    // 验证 token 有效性
+    var email=currentUser;
+    var pw=localStorage.getItem('gs_user_pw')||'';
+    fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'})
+      .then(function(r){return r.json();})
+      .then(function(users){
+        var u=users[email];
+        if(!u||u.password!==pw||(u.expiry!==0&&u.expiry<Date.now())){
+          // 过期或密码改了
+          localStorage.removeItem('gs_user');
+            localStorage.removeItem('gs_user_pw');
+          document.getElementById('mainContent').classList.remove('authed');
+          document.getElementById('loginOverlay').style.display='flex';
+          document.getElementById('uErr').textContent='帳號已過期或密碼已更改';
+        }
+      }).catch(function(){});
+    startApp();
+  }
+}
+function doLogoutUser(){
+  localStorage.removeItem('gs_user');
+  localStorage.removeItem('gs_user_pw');
+  currentUser=null;
+  location.reload();
+}
+
+var ae=false,sy=window.speechSynthesis;
+function sp(t){if(!ae||!sy)return;sy.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='zh-TW';u.rate=0.9;var v=sy.getVoices();for(var i=0;i<v.length;i++){if(v[i].lang.indexOf('zh')>=0){u.voice=v[i];break;}}sy.speak(t);}
+function vb(){if(navigator.vibrate)navigator.vibrate([200,100,200]);}
+function ea(){ae=true;document.getElementById('ap').classList.add('hid');sp('語音提醒已啟用');}
+function sc(ok,t){var e=document.getElementById('cs');e.className='conn '+(ok?'ok':'err');e.querySelector('.t').textContent=t||(ok?'已連接':'斷線');}
+function f(n,d){return parseFloat(n).toFixed(d||2);}
+function ft(ts){var d=new Date(ts);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');}
+if(sy){sy.getVoices();sy.onvoiceschanged=function(){sy.getVoices();};}
+
+var lastSignal = '', lastTs = 0;
+
+function checkStale(){
+  if(!lastTs) return;
+  var age = (Date.now() - lastTs) / 1000;
+  var el = document.getElementById('offbar');
+  var cs = document.getElementById('cs');
+  if(age > 180){
+    el.classList.add('show');
+    el.textContent = '⚠️ 數據已停止更新 ' + Math.floor(age/60) + ' 分鐘，請聯繫管理員啟動服務';
+    cs.className = 'conn err';
+    cs.querySelector('.t').textContent = '掉線';
+  } else if(age > 90){
+    el.classList.remove('show');
+    cs.className = 'conn warn';
+    cs.querySelector('.t').textContent = '數據延遲';
+  } else {
+    el.classList.remove('show');
+  }
+}
+setInterval(checkStale, 10000);
+
+async function load(){
+try{
+  var r = await fetch('data/data.json?t=' + Date.now(), {cache:'no-store'});
+  var d = await r.json();
+  if(d.error) throw new Error(d.error);
+  var t = d.ticker;
+  var s = d.strategy;
+  var p = parseFloat(t.lastPrice);
+  var c = parseFloat(t.priceChange);
+  var cp = parseFloat(t.priceChangePercent);
+  
+  document.getElementById('mp').textContent = '$' + f(p);
+  document.getElementById('cv').textContent = (c>=0?'+':'') + f(c);
+  document.getElementById('cv').className = c>=0?'up':'down';
+  document.getElementById('cp').textContent = '(' + (cp>=0?'+':'') + f(cp) + '%)';
+  document.getElementById('cp').className = cp>=0?'up':'down';
+  document.getElementById('h24').textContent = '$' + f(t.highPrice);
+  document.getElementById('l24').textContent = '$' + f(t.lowPrice);
+  document.getElementById('rng').textContent = '$' + f(t.highPrice - t.lowPrice);
+  
+  // 检查信号结果
+  checkSignalResults(p);
+  
+  lastTs = d.timestamp;
+  var age = Math.floor((Date.now() - d.timestamp) / 1000);
+  var status = age < 90 ? '✅ 實時' : '⚠️ 延遲 ' + age + '秒';
+  document.getElementById('dt').textContent = '更新: ' + ft(d.timestamp) + ' | ' + status;
+  sc(true, '已連接');
+  
+  document.getElementById('sw').classList.add('hid');
+  document.getElementById('ls').classList.add('hid');
+  document.getElementById('ss').classList.add('hid');
+  
+  if(s.indicators){
+    var i = s.indicators;
+    var re = document.getElementById('iR');
+    re.textContent = f(i.rsi, 1);
+    re.className = 'v' + (i.rsi<30?' ov':i.rsi>70?' ob':'');
+    document.getElementById('i7').textContent = '$' + f(i.ema7);
+    document.getElementById('i2').textContent = '$' + f(i.ema25);
+    document.getElementById('iU').textContent = '$' + f(i.bbUpper);
+    document.getElementById('iM').textContent = '$' + f(i.bbMiddle);
+    document.getElementById('iL').textContent = '$' + f(i.bbLower);
+  }
+  
+  if(s.signal === 'long'){
+    document.getElementById('ls').classList.remove('hid');
+    document.getElementById('le').textContent = '$' + f(s.price);
+    document.getElementById('lsl').textContent = '$' + f(s.price - 3);
+    document.getElementById('ltp').textContent = '$' + f(s.price + 6);
+    document.getElementById('lt').textContent = ft(d.timestamp);
+    document.getElementById('lr').textContent = '📋 ' + s.reason;
+    if(lastSignal !== 'long') {
+      if(!isRiskDay){
+        sp('做多信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      }
+      lastSignal = 'long';
+      // 记录信号
+      recordSignal('long', s.price, s.price - 3, s.price + 6);
+    }
+  } else if(s.signal === 'short'){
+    document.getElementById('ss').classList.remove('hid');
+    document.getElementById('se').textContent = '$' + f(s.price);
+    document.getElementById('ssl').textContent = '$' + f(s.price + 3);
+    document.getElementById('stp').textContent = '$' + f(s.price - 6);
+    document.getElementById('st').textContent = ft(d.timestamp);
+    document.getElementById('sr').textContent = '📋 ' + s.reason;
+    if(lastSignal !== 'short') {
+      if(!isRiskDay){
+        sp('做空信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      }
+      lastSignal = 'short';
+      // 记录信号
+      recordSignal('short', s.price, s.price + 3, s.price - 6);
+    }
+  } else {
+    document.getElementById('sw').classList.remove('hid');
+    lastSignal = '';
+  }
+} catch(e){
+  console.error(e);
+  sc(false, '斷線-重試中...');
+}
+}
+function startApp(){
+  load();
+  setInterval(load, 30000);
+  checkRiskAlerts(); // 检查风险提醒
+}
+
+/* ===== 风险提醒：周五晚上 + 经济数据 ===== */
+var isRiskDay = false; // 全局变量，控制喇叭是否静音
+
+async function checkRiskAlerts(){
+  var now = new Date();
+  var risks = [];
+  isRiskDay = false; // 重置
+  
+  // 周五晚上 20:00-24:00 风险提醒
+  if(now.getDay() === 5 && now.getHours() >= 20){
+    risks.push('🖤 <b>黑色星期五</b>：今晚波动极大，建议观望或轻仓！');
+    isRiskDay = true;
+  }
+  
+  // 自动获取经济数据（从免费API）
+  try {
+    var resp = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json');
+    var events = await resp.json();
+    
+    // 筛选今天或明天的高影响经济数据
+    var today = now.toISOString().split('T')[0];
+    var tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+    
+    events.forEach(function(evt){
+      if(evt.impact === 'High' && (evt.date.startsWith(today) || evt.date.startsWith(tomorrow))){
+        // 只显示影响黄金的国家（USD、EUR、GBP、CNY）
+        if(['USD','EUR','GBP','CNY'].includes(evt.country)){
+          var countryFlag = {'USD':'🇺🇸','EUR':'🇪🇺','GBP':'🇬🇧','CNY':'🇨🇳'}[evt.country] || '';
+          risks.push(countryFlag + ' <b>' + evt.title + '</b>（' + evt.country + '）：重大经济数据，金价可能剧烈波动！');
+          isRiskDay = true;
+        }
+      }
+    });
+  } catch(e) {
+    console.error('获取经济数据失败:', e);
+  }
+  
+  // 如果有风险，显示提醒
+  var riskDiv = document.getElementById('riskAlert');
+  var riskContent = document.getElementById('riskContent');
+  if(risks.length > 0){
+    riskDiv.style.display = 'block';
+    riskContent.innerHTML = risks.join('<br>');
+  } else {
+    riskDiv.style.display = 'none';
+  }
+}
+
+/* ===== 八字运势计算 ===== */
+var TIAN_GAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+var DI_ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+var GAN_WUXING = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+var ZHI_WUXING = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
+var SHI_CHEN = {'zi':0,'chou':1,'yin':2,'mao':3,'chen':4,'si':5,'wu':6,'wei':7,'shen':8,'you':9,'xu':10,'hai':11};
+var SHENG_XIAO = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
+
+function getYearGanZhi(year) {
+  var ganIdx = (year - 4) % 10;
+  var zhiIdx = (year - 4) % 12;
+  return { gan: TIAN_GAN[ganIdx], zhi: DI_ZHI[zhiIdx] };
+}
+
+function getMonthGanZhi(year, month) {
+  var zhiIdx = (month + 1) % 12;
+  var yearGan = getYearGanZhi(year).gan;
+  var ganBase = TIAN_GAN.indexOf(yearGan);
+  var ganIdx = (ganBase * 2 + month + 1) % 10;
+  return { gan: TIAN_GAN[ganIdx], zhi: DI_ZHI[zhiIdx] };
+}
+
+function getDayGanZhi(year, month, day) {
+  var baseDate = new Date(2000, 0, 7);
+  var targetDate = new Date(year, month - 1, day);
+  var diff = Math.floor((targetDate - baseDate) / 86400000);
+  var ganIdx = ((diff % 10) + 10) % 10;
+  var zhiIdx = ((diff % 12) + 12) % 12;
+  return { gan: TIAN_GAN[ganIdx], zhi: DI_ZHI[zhiIdx] };
+}
+
+function getHourZhi(shiChen) { return DI_ZHI[SHI_CHEN[shiChen]]; }
+
+function countWuXing(bazi) {
+  var count = {'木':0,'火':0,'土':0,'金':0,'水':0};
+  count[GAN_WUXING[bazi.year.gan]]++;
+  count[GAN_WUXING[bazi.month.gan]]++;
+  count[GAN_WUXING[bazi.day.gan]]++;
+  count[ZHI_WUXING[bazi.year.zhi]]++;
+  count[ZHI_WUXING[bazi.month.zhi]]++;
+  count[ZHI_WUXING[bazi.day.zhi]]++;
+  count[ZHI_WUXING[bazi.hour.zhi]]++;
+  return count;
+}
+
+function getShengKe(myWx, dayWx) {
+  var sheng = {'木':'火','火':'土','土':'金','金':'水','水':'木'};
+  var ke = {'木':'土','土':'水','水':'火','火':'金','金':'木'};
+  var shengMe = {'木':'水','水':'金','金':'土','土':'火','火':'木'};
+  var keMe = {'木':'金','金':'火','火':'水','水':'土','土':'木'};
+  if(myWx === dayWx) return { type: '比和', score: 0 };
+  if(sheng[myWx] === dayWx) return { type: '我生', score: -1 };
+  if(ke[myWx] === dayWx) return { type: '我克', score: 1 };
+  if(shengMe[myWx] === dayWx) return { type: '生我', score: 2 };
+  if(keMe[myWx] === dayWx) return { type: '克我', score: -2 };
+  return { type: '中', score: 0 };
+}
+
+function getNameScore(name) {
+  var score = 0;
+  for(var i = 0; i < name.length; i++) score += name.charCodeAt(i);
+  return score % 10;
+}
+
+function calcDailyFortune(bazi, name) {
+  var today = new Date();
+  var todayBazi = getDayGanZhi(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  var dayWx = GAN_WUXING[todayBazi.gan];
+  var myWx = GAN_WUXING[bazi.day.gan];
+  var relation = getShengKe(myWx, dayWx);
+  var wxCount = countWuXing(bazi);
+  var lacking = [];
+  for(var wx in wxCount) if(wxCount[wx] === 0) lacking.push(wx);
+  var baseScore = 50 + relation.score * 10 + getNameScore(name) * 2 - lacking.length * 5;
+  var seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  var random = ((seed * 9301 + 49297) % 233280) / 233280;
+  baseScore = Math.max(0, Math.min(100, baseScore + Math.floor(random * 20) - 10));
+  var level, color, advice;
+  if(baseScore >= 70) { level = '吉'; color = '#2ed573'; advice = '今日运势旺盛，可大胆操作！'; }
+  else if(baseScore >= 50) { level = '平'; color = '#FFD700'; advice = '运势平稳，谨慎操作。'; }
+  else { level = '凶'; color = '#ff4757'; advice = '今日运势不佳，建议观望！'; }
+  return { score: baseScore, level: level, color: color, advice: advice,
+    dayGanZhi: todayBazi.gan + todayBazi.zhi, dayWx: dayWx, myWx: myWx,
+    relation: relation.type, lacking: lacking, shengXiao: SHENG_XIAO[(bazi.yearZhiIdx || 0)] };
+}
+
+function showFortuneModal() {
+  document.getElementById('fortuneModal').style.display = 'flex';
+  var saved = localStorage.getItem('gs_fortune');
+  if(saved) { var data = JSON.parse(saved);
+    document.getElementById('fortuneName').value = data.name || '';
+    document.getElementById('fortuneYear').value = data.year || '';
+    document.getElementById('fortuneMonth').value = data.month || '';
+    document.getElementById('fortuneDay').value = data.day || '';
+    document.getElementById('fortuneTime').value = data.time || '';
+  }
+}
+function closeFortuneModal() { document.getElementById('fortuneModal').style.display = 'none'; }
+
+function calcFortune() {
+  var name = document.getElementById('fortuneName').value.trim();
+  var year = parseInt(document.getElementById('fortuneYear').value);
+  var month = parseInt(document.getElementById('fortuneMonth').value);
+  var day = parseInt(document.getElementById('fortuneDay').value);
+  var time = document.getElementById('fortuneTime').value;
+  if(!name) { alert('请输入姓名'); return; }
+  if(!year || year < 1900 || year > 2030) { alert('请输入有效年份（1900-2030）'); return; }
+  if(!month) { alert('请选择农历月份'); return; }
+  if(!day) { alert('请选择农历日期'); return; }
+  if(!time) { alert('请选择出生时段'); return; }
+  // 农历直接作为八字输入（简化算法，假设用户输入的是农历）
+  var bazi = { year: getYearGanZhi(year), month: getMonthGanZhi(year, month),
+    day: getDayGanZhi(year, month, day), hour: { gan: '?', zhi: getHourZhi(time) }, yearZhiIdx: (year - 4) % 12 };
+  var fortune = calcDailyFortune(bazi, name);
+  localStorage.setItem('gs_fortune', JSON.stringify({ name: name, year: year, month: month, day: day, time: time, lastCalc: Date.now(), result: fortune }));
+  showFortuneResult(fortune);
+  if(fortune.level === '凶') isRiskDay = true;
+  closeFortuneModal();
+}
+
+function showFortuneResult(fortune) {
+  document.getElementById('fortuneResult').style.display = 'block';
+  document.getElementById('fortuneEmpty').style.display = 'none';
+  document.getElementById('fortuneBtn').textContent = '重新计算';
+  var html = '<div style="font-size:24px;font-weight:700;color:' + fortune.color + ';margin-bottom:8px">' + fortune.level + '</div>';
+  html += '<div style="font-size:12px;color:#888;margin-bottom:6px">' + fortune.dayGanZhi + '日 | ' + fortune.dayWx + '旺</div>';
+  html += '<div style="font-size:11px;color:#666;margin-bottom:8px">你的日主：<span style="color:#9b59b6">' + fortune.myWx + '</span> | ' + fortune.relation + '</div>';
+  html += '<div style="font-size:13px;color:' + fortune.color + ';font-weight:700">' + fortune.advice + '</div>';
+  if(fortune.lacking.length > 0) html += '<div style="font-size:11px;color:#888;margin-top:6px">命中缺：' + fortune.lacking.join('、') + '</div>';
+  document.getElementById('fortuneText').innerHTML = html;
+}
+
+// 加载本周经济数据
+async function loadWeekNews() {
+  try {
+    var r = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json?t=' + Date.now(), {cache: 'no-store'});
+    var data = await r.json();
+    var highImpact = data.filter(function(item) {
+      return item.impact === 'High' && ['USD', 'EUR', 'GBP', 'CNY'].indexOf(item.country) !== -1;
+    });
+    var container = document.getElementById('weekNewsList');
+    if (!container) return;
+    if (highImpact.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:16px;color:#2ed573;font-weight:700">✅ 本周无重大数据，市场相对平稳</div>';
+      return;
+    }
+    var html = '';
+    highImpact.forEach(function(item) {
+      var dateStr = item.date || '';
+      var title = item.title || '';
+      var country = item.country || '';
+      var flag = country === 'USD' ? '🇺🇸' : country === 'EUR' ? '🇪🇺' : country === 'GBP' ? '🇬🇧' : '🇨🇳';
+      var color = '#ff4757';
+      html += '<div style="padding:10px 12px;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.2);border-radius:8px;margin-bottom:8px">';
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+      html += '<span style="font-size:14px">' + flag + '</span>';
+      html += '<span style="font-size:12px;font-weight:700;color:' + color + '">' + title + '</span>';
+      html += '</div>';
+      html += '<div style="font-size:11px;color:#888">' + dateStr + ' | ' + country + '</div>';
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  } catch(e) {
+    var container = document.getElementById('weekNewsList');
+    if (container) container.innerHTML = '<div style="text-align:center;padding:16px;color:#888">暂无数据</div>';
+  }
+}
+loadWeekNews();
+
+document.addEventListener('DOMContentLoaded', function() {
+  var saved = localStorage.getItem('gs_fortune');
+  if(saved) {
+    var data = JSON.parse(saved);
+    var today = new Date().toDateString();
+    var calcDate = new Date(data.lastCalc).toDateString();
+    if(today === calcDate && data.result) {
+      showFortuneResult(data.result);
+      if(data.result.level === '凶') isRiskDay = true;
+    }
+  }
+});
+
+checkLogin();
+</script>
+</div>
+</body>
+</html>
