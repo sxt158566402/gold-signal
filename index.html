@@ -280,7 +280,9 @@ try{
     document.getElementById('lt').textContent = ft(d.timestamp);
     document.getElementById('lr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'long') {
-      sp('做多信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      if(!isRiskDay){
+        sp('做多信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      }
       lastSignal = 'long';
     }
   } else if(s.signal === 'short'){
@@ -291,7 +293,9 @@ try{
     document.getElementById('st').textContent = ft(d.timestamp);
     document.getElementById('sr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'short') {
-      sp('做空信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      if(!isRiskDay){
+        sp('做空信號！進場價' + f(s.price) + '，記得止損！'); vb();
+      }
       lastSignal = 'short';
     }
   } else {
@@ -309,45 +313,39 @@ function startApp(){
   checkRiskAlerts(); // 检查风险提醒
 }
 
-/* ===== 风险提醒：黑色星期五 + 经济数据 ===== */
+/* ===== 风险提醒：每周五 + 经济数据 ===== */
+var isRiskDay = false; // 全局变量，控制喇叭是否静音
+
 function checkRiskAlerts(){
   var now = new Date();
   var risks = [];
+  isRiskDay = false; // 重置
   
-  // 检测黑色星期五（每月第三个周五）
-  var year = now.getFullYear();
-  var month = now.getMonth();
-  // 找到本月所有周五
-  var fridays = [];
-  for(var d=1; d<=31; d++){
-    var dt = new Date(year, month, d);
-    if(dt.getMonth() === month && dt.getDay() === 5){
-      fridays.push(dt);
-    }
-  }
-  // 第三个周五是黑色星期五
-  if(fridays.length >= 3){
-    var blackFriday = fridays[2];
-    var diffMs = now - blackFriday;
-    var diffDays = diffMs / (1000*60*60*24);
-    // 当天或前后1天都显示警告
-    if(Math.abs(diffDays) <= 1){
-      risks.push('🖤 <b>黑色星期五</b>：今晚波动极大，建议观望或轻仓！');
-    }
+  // 每周五都显示风险提醒
+  if(now.getDay() === 5){
+    risks.push('🖤 <b>黑色星期五</b>：今晚波动极大，建议观望或轻仓！');
+    isRiskDay = true;
   }
   
-  // 检测重要经济数据（简化版：每月固定日期）
+  // 检测重要经济数据
   var dayOfMonth = now.getDate();
-  var hour = now.getHours();
   
   // 非农：每月第一个周五
   if(dayOfMonth <= 7 && now.getDay() === 5){
     risks.push('📊 <b>非农就业数据（NFP）</b>：今晚20:30公布，金价可能剧烈波动！');
+    isRiskDay = true;
   }
   
   // CPI：每月10-15号
   if(dayOfMonth >= 10 && dayOfMonth <= 15){
     risks.push('📊 <b>CPI通胀数据</b>：近期公布，注意金价波动！');
+    isRiskDay = true;
+  }
+  
+  // 美联储利率决议：每月中旬（简化判断）
+  if(dayOfMonth >= 15 && dayOfMonth <= 21){
+    risks.push('📊 <b>美联储利率决议</b>：近期公布，注意金价波动！');
+    isRiskDay = true;
   }
   
   // 如果有风险，显示提醒
