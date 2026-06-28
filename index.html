@@ -408,10 +408,13 @@ function drawKlineChart() {
   var canvas = document.getElementById('priceChart');
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
-  var w = canvas.parentElement.clientWidth - 20;
-  var h = 180;
-  canvas.width = w;
-  canvas.height = h;
+  // 等待DOM渲染完成
+  setTimeout(function() {
+    var w = canvas.parentElement.clientWidth - 20;
+    var h = 180;
+    if (w <= 0) w = 300; // 默认宽度
+    canvas.width = w;
+    canvas.height = h;
   ctx.clearRect(0, 0, w, h);
   if (chartData.length === 0) return;
   
@@ -469,6 +472,7 @@ function drawKlineChart() {
     ctx.fillStyle = color;
     ctx.fillRect(x - kWidth / 2, bodyTop, kWidth, bodyHeight);
   }
+  }, 100); // end setTimeout
 }
 
 /* ===== 仓位计算器 ===== */
