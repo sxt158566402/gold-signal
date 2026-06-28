@@ -1,11 +1,40 @@
 {
-  "ticker": {"lastPrice": "4056.73"},
+  "ticker": {
+    "symbol": "PAXGUSDT",
+    "priceChange": "-12.37000000",
+    "priceChangePercent": "-0.303",
+    "weightedAvgPrice": "4074.21466544",
+    "prevClosePrice": "4077.26000000",
+    "lastPrice": "4064.89000000",
+    "lastQty": "0.15460000",
+    "bidPrice": "4064.71000000",
+    "bidQty": "0.20780000",
+    "askPrice": "4064.72000000",
+    "askQty": "1.95610000",
+    "openPrice": "4077.26000000",
+    "highPrice": "4081.64000000",
+    "lowPrice": "4050.73000000",
+    "volume": "1287.27100000",
+    "quoteVolume": "5244618.38659300",
+    "openTime": 1782601709888,
+    "closeTime": 1782688109888,
+    "firstId": 48638447,
+    "lastId": 48664603,
+    "count": 26157
+  },
   "klines": [],
   "strategy": {
     "signal": "waiting",
-    "price": 4056.73,
-    "reason": "監控中",
-    "indicators": {"rsi": 50, "ema7": 4056.73, "ema25": 4056.73, "bbUpper": 4056.73, "bbMiddle": 4056.73, "bbLower": 4056.73}
+    "price": 4064.89,
+    "reason": "\u76e3\u63a7\u4e2d",
+    "indicators": {
+      "rsi": 50,
+      "ema7": 4064.89,
+      "ema25": 4064.89,
+      "bbUpper": 4064.89,
+      "bbMiddle": 4064.89,
+      "bbLower": 4064.89
+    }
   },
-  "timestamp": 1782688089000
+  "timestamp": 1782688110882
 }
