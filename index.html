@@ -389,11 +389,13 @@ var chartData = [];
 
 async function loadChart(period) {
   try {
+    console.log('loadChart开始, period:', period);
     // period: '1h'=1小时K线24根, '4h'=4小时K线30根
     var interval = period === '1h' ? '1h' : '4h';
     var limit = period === '1h' ? 24 : 30;
     var r = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=' + interval + '&limit=' + limit, {cache: 'no-store'});
     var data = await r.json();
+    console.log('获取到K线数据:', data.length, '根');
     chartData = data.map(function(k) {
       return {
         time: new Date(k[0]).toLocaleString('zh-CN', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}),
@@ -403,6 +405,7 @@ async function loadChart(period) {
         close: parseFloat(k[4])
       };
     });
+    console.log('chartData转换完成:', chartData.length, '根');
     drawKlineChart();
   } catch(e) {
     console.log('Chart error:', e);
@@ -411,11 +414,15 @@ async function loadChart(period) {
 
 function drawKlineChart() {
   var canvas = document.getElementById('priceChart');
-  if (!canvas) return;
+  if (!canvas) {
+    console.log('找不到Canvas元素');
+    return;
+  }
   var ctx = canvas.getContext('2d');
   
   // 等待DOM渲染完成
   setTimeout(function() {
+    console.log('开始绘制K线图...');
     // 获取父容器的宽度
     var parent = canvas.parentElement;
     var w = parent.offsetWidth - 20;
@@ -425,7 +432,11 @@ function drawKlineChart() {
     canvas.width = w;
     canvas.height = h;
     ctx.clearRect(0, 0, w, h);
-    if (chartData.length === 0) return;
+    if (chartData.length === 0) {
+      console.log('chartData为空');
+      return;
+    }
+    console.log('chartData长度:', chartData.length);
     
     // 计算价格范围
     var allPrices = [];
@@ -603,7 +614,11 @@ function checkLogin(){
     document.getElementById('loginOverlay').style.display='none';
     document.getElementById('mainContent').classList.add('authed');
     // 已登录用户，加载图表和统计
-    setTimeout(function() { loadChart('1h'); updateStats(); }, 500);
+    setTimeout(function() {
+      console.log('开始加载图表...');
+      loadChart('1h');
+      updateStats();
+    }, 1000);
     // 验证 token 有效性
     var email=currentUser;
     var pw=localStorage.getItem('gs_user_pw')||'';
