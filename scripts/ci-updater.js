@@ -83,7 +83,12 @@ async function update() {
         console.log(new Date().toISOString(), 'No changes');
       } catch(e) {
         execSync(`git commit -m "update ${new Date().toISOString().slice(11,19)}"`, { timeout: 5000 });
-        execSync('git push origin gh-pages', { timeout: 30000 });
+        try {
+          execSync('git push origin gh-pages', { timeout: 30000 });
+        } catch(pushErr) {
+          execSync('git pull --rebase origin gh-pages', { timeout: 15000 });
+          execSync('git push origin gh-pages', { timeout: 30000 });
+        }
         console.log(new Date().toISOString(), `Pushed! Price: $${p} RSI: ${rsi.toFixed(1)}`);
       }
       execSync('git checkout main 2>/dev/null', { timeout: 5000 });

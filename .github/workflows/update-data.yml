@@ -14,28 +14,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch PAXG data
         run: |
-          # Try multiple APIs with fallbacks
           if curl -sf --max-time 10 "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/ticker.json; then
             curl -sf --max-time 10 "https://api1.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50" > /tmp/klines.json
             echo "SOURCE=binance" >> $GITHUB_ENV
-          elif curl -sf --max-time 10 "https://api.coingecko.com/api/v3/coins/pax-gold/market_chart?vs_currency=usd&days=1" > /tmp/cg.json; then
+          elif curl -sf --max-time 10 "https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd" > /tmp/cg.json; then
             echo "SOURCE=coingecko" >> $GITHUB_ENV
           else
-            echo "All APIs blocked, skipping"
-            exit 0
+            echo "SKIP=true" >> $GITHUB_ENV
           fi
 
       - name: Build data.json
+        if: env.SKIP != 'true'
         run: |
           python3 << 'PYEOF'
           import json, datetime, os, sys
-
           source = os.environ.get('SOURCE', '')
           now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
-
           if source == 'binance' and os.path.exists('/tmp/ticker.json'):
               t = json.load(open('/tmp/ticker.json'))
               k = json.load(open('/tmp/klines.json'))
@@ -64,24 +62,39 @@ jobs:
                       'bbMiddle': round(m,2), 'bbLower': round(m-2*sd,2)}},
                   'timestamp': now_ms
               }
+              os.makedirs('data', exist_ok=True)
+              with open('data/data.json', 'w') as f:
+                  json.dump(data, f, indent=2)
+              print(f'Binance OK: ${p} RSI={round(r,2)} sig={sig}')
+          elif source == 'coingecko' and os.path.exists('/tmp/cg.json'):
+              cg = json.load(open('/tmp/cg.json'))
+              p = cg['pax-gold']['usd']
+              data = {
+                  'ticker': {'lastPrice': str(p), 'priceChange': '0', 'priceChangePercent': '0', 'highPrice': str(p), 'lowPrice': str(p)},
+                  'strategy': {'signal': 'waiting', 'price': p, 'reason': 'CoinGecko only', 'indicators': {
+                      'rsi': 50, 'ema7': p, 'ema25': p, 'bbUpper': p, 'bbMiddle': p, 'bbLower': p}},
+                  'timestamp': now_ms
+              }
+              os.makedirs('data', exist_ok=True)
+              with open('data/data.json', 'w') as f:
+                  json.dump(data, f, indent=2)
+              print(f'CoinGecko OK: ${p}')
           else:
-              print('No data source available, skipping')
+              print('No data')
               sys.exit(0)
-
-          os.makedirs('data', exist_ok=True)
-          with open('data/data.json', 'w') as f:
-              json.dump(data, f, indent=2)
-          print(f'OK: ${p} RSI={round(r,2)} sig={sig}')
           PYEOF
 
-      - name: Push to gh-pages
+      - name: Commit and push
+        if: env.SKIP != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/data.json
+          git add -A
+          TS=$(date -u +%H:%M:%S)
           if ! git diff --cached --quiet; then
-            git commit -m "update $(date -u +%H:%M:%S)"
-            git push
+            git commit -m "update $TS"
+            git push origin gh-pages
+            echo "PUSHED at $TS"
           else
-            echo "No changes"
+            echo "No changes at $TS"
           fi
