@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GoldSniper v13 - 黃金交易信號</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a25;--border:#2a2a35;--text:#e8e8f0;--gold:#FFD700;--gold-dim:#b8960f;--red:#ff4757;--green:#2ed573;--blue:#3498db}
+body{font-family:'Noto Sans SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-user-select:none;user-select:none}
+.status-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--gold);font-size:16px}
+.connection-status{display:flex;align-items:center;gap:6px;font-size:12px;color:#888}
+.connection-status .dot{width:8px;height:8px;border-radius:50%;background:#666}
+.connection-status.connected .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+.connection-status.error .dot{background:var(--red)}
+.price-hero{text-align:center;padding:30px 16px 20px;background:linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%)}
+.price-label{font-size:13px;color:#888;margin-bottom:4px;letter-spacing:1px}
+.price-main{font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:800;color:var(--gold);line-height:1.1;text-shadow:0 0 20px rgba(255,215,0,0.2)}
+.price-change{margin-top:8px;font-size:14px;display:flex;justify-content:center;gap:12px}
+.price-change .up{color:var(--green)}
+.price-change .down{color:var(--red)}
+.price-range{display:flex;justify-content:center;gap:24px;margin-top:16px}
+.range-item{text-align:center}
+.range-label{display:block;font-size:11px;color:#666;margin-bottom:2px}
+.range-value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)}
+.data-time{font-size:11px;color:#555;margin-top:12px;font-family:'JetBrains Mono',monospace}
+.signal-zone{padding:16px}
+.signal-waiting{text-align:center;padding:40px 20px;color:#666}
+.signal-waiting .sub{font-size:13px;color:#555;margin-top:6px}
+.signal-card{border-radius:12px;padding:20px;margin:0 auto 16px;max-width:400px;animation:fadeIn 0.5s}
+.signal-card.long-signal{background:linear-gradient(135deg,rgba(46,213,115,0.15),rgba(46,213,115,0.05));border:1px solid rgba(46,213,115,0.3)}
+.signal-card.short-signal{background:linear-gradient(135deg,rgba(255,71,87,0.15),rgba(255,71,87,0.05));border:1px solid rgba(255,71,87,0.3)}
+.signal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.signal-badge{padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700}
+.signal-badge.long{background:var(--green);color:#000}
+.signal-badge.short{background:var(--red);color:#fff}
+.signal-time{font-size:12px;color:#888;font-family:'JetBrains Mono',monospace}
+.signal-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.signal-row:last-child{border:none}
+.signal-row .label{color:#aaa;font-size:13px}
+.signal-row .value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px}
+.signal-row.main .value{color:var(--gold);font-size:18px}
+.stop-loss{color:var(--red) !important}
+.take-profit{color:var(--green) !important}
+.signal-reason{margin-top:12px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px;color:#aaa;line-height:1.5}
+.indicators{padding:16px}
+.indicators-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.indicator-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.indicator-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 8px;text-align:center}
+.indicator-item .name{font-size:11px;color:#888;margin-bottom:4px}
+.indicator-item .val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)}
+.indicator-item .val.oversold{color:var(--green)}
+.indicator-item .val.overbought{color:var(--red)}
+.audio-prompt{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:center;justify-content:center}
+.audio-prompt-inner{text-align:center;padding:40px}
+.audio-prompt .audio-icon{margin-bottom:16px}
+.audio-prompt p{color:var(--text);margin-bottom:8px}
+.audio-prompt .sub{font-size:13px;color:#888}
+.audio-btn{margin-top:20px;padding:14px 32px;background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:#000;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all 0.3s}
+.audio-btn:active{transform:scale(0.95)}
+.hidden{display:none !important}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.pulse{animation:pulse 2s infinite}
+@media(max-width:380px){.price-main{font-size:40px}.indicator-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="audio-prompt" id="audioPrompt">
+  <div class="audio-prompt-inner">
+    <svg class="audio-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+    </svg>
+    <p style="font-size:18px;font-weight:700">點擊啟用語音提醒</p>
+    <p class="sub">信號觸發時會語音播報：<br>「可以下單了，記得止損！」</p>
+    <button class="audio-btn" id="enableAudio">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+      啟用喇叭提醒
+    </button>
+  </div>
+</div>
+
+<header class="status-bar">
+  <div class="logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L2 19h20L12 2z" stroke="#FFD700" stroke-width="2" fill="none"/>
+      <path d="M12 8L7 17h10L12 8z" fill="#FFD700" opacity="0.3"/>
+    </svg>
+    <span>GoldSniper v13</span>
+  </div>
+  <div class="connection-status" id="connStatus">
+    <span class="dot"></span>
+    <span class="text">連接中...</span>
+  </div>
+</header>
+
+<section class="price-hero">
+  <div class="price-label">XAUUSD 實時價格</div>
+  <div class="price-main" id="mainPrice">----</div>
+  <div class="price-change">
+    <span id="changeVal">--</span>
+    <span id="changePct">--</span>
+  </div>
+  <div class="price-range">
+    <div class="range-item"><span class="range-label">24h 高</span><span class="range-value" id="high24">--</span></div>
+    <div class="range-item"><span class="range-label">24h 低</span><span class="range-value" id="low24">--</span></div>
+    <div class="range-item"><span class="range-label">24h 波幅</span><span class="range-value" id="range24">--</span></div>
+  </div>
+  <div class="data-time" id="dataTime"></div>
+</section>
+
+<section class="signal-zone">
+  <div class="signal-waiting" id="signalWaiting">
+    <div class="pulse" style="font-size:48px;margin-bottom:12px">⏳</div>
+    <p style="font-size:16px;font-weight:700">等待信號中...</p>
+    <p class="sub">系統監控中，大漲/大跌後企穩會自動提示</p>
+  </div>
+  <div class="signal-card long-signal hidden" id="longSignal">
+    <div class="signal-header">
+      <span class="signal-badge long">📈 做多</span>
+      <span class="signal-time" id="longTime"></span>
+    </div>
+    <div class="signal-row main"><span class="label">進場價位</span><span class="value" id="longEntry">--</span></div>
+    <div class="signal-row"><span class="label">止損 (-3)</span><span class="value stop-loss" id="longSL">--</span></div>
+    <div class="signal-row"><span class="label">止盈 (+6)</span><span class="value take-profit" id="longTP">--</span></div>
+    <div class="signal-reason" id="longReason"></div>
+  </div>
+  <div class="signal-card short-signal hidden" id="shortSignal">
+    <div class="signal-header">
+      <span class="signal-badge short">📉 做空</span>
+      <span class="signal-time" id="shortTime"></span>
+    </div>
+    <div class="signal-row main"><span class="label">進場價位</span><span class="value" id="shortEntry">--</span></div>
+    <div class="signal-row"><span class="label">止損 (+3)</span><span class="value stop-loss" id="shortSL">--</span></div>
+    <div class="signal-row"><span class="label">止盈 (-6)</span><span class="value take-profit" id="shortTP">--</span></div>
+    <div class="signal-reason" id="shortReason"></div>
+  </div>
+</section>
+
+<section class="indicators">
+  <div class="indicators-title">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-10"/></svg>
+    技術指標
+  </div>
+  <div class="indicator-grid">
+    <div class="indicator-item"><div class="name">RSI(14)</div><div class="val" id="indRSI">--</div></div>
+    <div class="indicator-item"><div class="name">EMA7</div><div class="val" id="indEMA7">--</div></div>
+    <div class="indicator-item"><div class="name">EMA25</div><div class="val" id="indEMA25">--</div></div>
+    <div class="indicator-item"><div class="name">BB 上軌</div><div class="val" id="indBBU">--</div></div>
+    <div class="indicator-item"><div class="name">BB 中軌</div><div class="val" id="indBBM">--</div></div>
+    <div class="indicator-item"><div class="name">BB 下軌</div><div class="val" id="indBBL">--</div></div>
+  </div>
+</section>
+
+<script>
+var $ = function(id) { return document.getElementById(id); };
+var audioEnabled = false;
+var speechSynth = window.speechSynthesis;
+
+function speak(text) {
+  if (!audioEnabled || !speechSynth) return;
+  speechSynth.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-TW'; u.rate = 0.9; u.pitch = 1.0; u.volume = 1.0;
+  var voices = speechSynth.getVoices();
+  for (var i = 0; i < voices.length; i++) {
+    if (voices[i].lang.indexOf('zh') >= 0) { u.voice = voices[i]; break; }
+  }
+  speechSynth.speak(u);
+}
+function vibrate() { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); }
+function setConn(ok, text) {
+  var el = $('connStatus');
+  el.className = 'connection-status ' + (ok ? 'connected' : 'error');
+  el.querySelector('.text').textContent = text || (ok ? '已連接' : '斷線');
+}
+function fmtNum(n, d) { return parseFloat(n).toFixed(d || 2); }
+function fmtTime(ts) {
+  var d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0');
+}
+
+var audioPrompt = $('audioPrompt');
+var enableBtn = $('enableAudio');
+if (enableBtn) {
+  enableBtn.addEventListener('click', function() {
+    audioEnabled = true;
+    audioPrompt.classList.add('hidden');
+    speak('語音提醒已啟用');
+  });
+}
+if (speechSynth) { speechSynth.getVoices(); speechSynth.onvoiceschanged = function() { speechSynth.getVoices(); }; }
+
+// ===== 直接調幣安 API =====
+var lastPrice = 0;
+
+async function loadData() {
+  try {
+    // 1. 獲取 24hr ticker
+    var tickerResp = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');
+    var t = await tickerResp.json();
+    
+    // 2. 獲取 K 線（5分鐘）
+    var klineResp = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=5m&limit=50');
+    var klines = await klineResp.json();
+    
+    var price = parseFloat(t.lastPrice);
+    var change = parseFloat(t.priceChange);
+    var changePct = parseFloat(t.priceChangePercent);
+    
+    // 更新價格
+    $('mainPrice').textContent = '$' + fmtNum(price);
+    $('changeVal').textContent = (change >= 0 ? '+' : '') + fmtNum(change);
+    $('changeVal').className = change >= 0 ? 'up' : 'down';
+    $('changePct').textContent = '(' + (changePct >= 0 ? '+' : '') + fmtNum(changePct) + '%)';
+    $('changePct').className = change >= 0 ? 'up' : 'down';
+    $('high24').textContent = '$' + fmtNum(t.highPrice);
+    $('low24').textContent = '$' + fmtNum(t.lowPrice);
+    $('range24').textContent = '$' + fmtNum(t.highPrice - t.lowPrice);
+    $('dataTime').textContent = '數據更新: ' + fmtTime(Date.now()) + ' (每10秒刷新)';
+    setConn(true, '已連接');
+    
+    // 3. 計算技術指標
+    var closes = klines.map(function(k) { return parseFloat(k[4]); });
+    var highs = klines.map(function(k) { return parseFloat(k[2]); });
+    var lows = klines.map(function(k) { return parseFloat(k[3]); });
+    
+    // RSI(14)
+    function calcRSI(data, period) {
+      if (data.length < period + 1) return 50;
+      var gains = 0, losses = 0;
+      for (var i = data.length - period; i < data.length; i++) {
+        var diff = data[i] - data[i-1];
+        if (diff > 0) gains += diff; else losses -= diff;
+      }
+      if (losses === 0) return 100;
+      var rs = gains / losses;
+      return 100 - (100 / (1 + rs));
+    }
+    
+    // EMA
+    function calcEMA(data, period) {
+      if (data.length < period) return data[data.length - 1];
+      var k = 2 / (period + 1);
+      var ema = data[0];
+      for (var i = 1; i < data.length; i++) {
+        ema = data[i] * k + ema * (1 - k);
+      }
+      return ema;
+    }
+    
+    // Bollinger Bands
+    function calcBB(data, period) {
+      var slice = data.slice(-period);
+      var sum = slice.reduce(function(a, b) { return a + b; }, 0);
+      var mean = sum / period;
+      var variance = slice.reduce(function(a, b) { return a + (b - mean) * (b - mean); }, 0) / period;
+      var std = Math.sqrt(variance);
+      return { upper: mean + 2 * std, middle: mean, lower: mean - 2 * std };
+    }
+    
+    var rsi = calcRSI(closes, 14);
+    var ema7 = calcEMA(closes, 7);
+    var ema25 = calcEMA(closes, 25);
+    var bb = calcBB(closes, 20);
+    
+    $('indRSI').textContent = fmtNum(rsi, 1);
+    $('indRSI').className = 'val' + (rsi < 30 ? ' oversold' : rsi > 70 ? ' overbought' : '');
+    $('indEMA7').textContent = '$' + fmtNum(ema7);
+    $('indEMA25').textContent = '$' + fmtNum(ema25);
+    $('indBBU').textContent = '$' + fmtNum(bb.upper);
+    $('indBBM').textContent = '$' + fmtNum(bb.middle);
+    $('indBBL').textContent = '$' + fmtNum(bb.lower);
+    
+    // 4. 策略判斷（簡單突破策略）
+    var recentHighs = highs.slice(-10);
+    var recentLows = lows.slice(-10);
+    var maxHigh = Math.max.apply(null, recentHighs);
+    var minLow = Math.min.apply(null, recentLows);
+    var signal = 'waiting';
+    var signalPrice = price;
+    var signalReason = '';
+    
+    if (price > maxHigh && rsi > 50) {
+      signal = 'long';
+      signalReason = '突破近10根K線高點 + RSI偏多';
+    } else if (price < minLow && rsi < 50) {
+      signal = 'short';
+      signalReason = '跌破近10根K線低點 + RSI偏空';
+    }
+    
+    $('signalWaiting').classList.add('hidden');
+    $('longSignal').classList.add('hidden');
+    $('shortSignal').classList.add('hidden');
+    
+    if (signal === 'long') {
+      $('longSignal').classList.remove('hidden');
+      $('longEntry').textContent = '$' + fmtNum(signalPrice);
+      $('longSL').textContent = '$' + fmtNum(signalPrice - 3);
+      $('longTP').textContent = '$' + fmtNum(signalPrice + 6);
+      $('longTime').textContent = fmtTime(Date.now());
+      $('longReason').textContent = '📋 ' + signalReason;
+      speak('做多信號！進場價' + fmtNum(signalPrice) + '，記得止損！');
+      vibrate();
+    } else if (signal === 'short') {
+      $('shortSignal').classList.remove('hidden');
+      $('shortEntry').textContent = '$' + fmtNum(signalPrice);
+      $('shortSL').textContent = '$' + fmtNum(signalPrice + 3);
+      $('shortTP').textContent = '$' + fmtNum(signalPrice - 6);
+      $('shortTime').textContent = fmtTime(Date.now());
+      $('shortReason').textContent = '📋 ' + signalReason;
+      speak('做空信號！進場價' + fmtNum(signalPrice) + '，記得止損！');
+      vibrate();
+    } else {
+      $('signalWaiting').classList.remove('hidden');
+    }
+    
+    lastPrice = price;
+    
+  } catch(e) {
+    console.error('數據獲取失敗:', e);
+    setConn(false, '斷線 - 重試中...');
+    // 重試
+    setTimeout(loadData, 3000);
+  }
+}
+
+loadData();
+setInterval(loadData, 10000);
+</script>
+</body>
+</html>
