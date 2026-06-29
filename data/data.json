@@ -1,11 +1,11 @@
 {
   "ticker": {
-    "lastPrice": "4026.65",
-    "priceChange": "-1.15",
-    "priceChangePercent": "-1.15",
+    "lastPrice": "4023.76",
+    "priceChange": "-1.22",
+    "priceChangePercent": "-1.22",
     "highPrice": "4084.02",
     "lowPrice": "3999",
-    "volume": "111.6"
+    "volume": "112.336"
   },
   "klines": [
     [
@@ -13,7 +13,7 @@
       "4021.98",
       "4029.21",
       "4021.11",
-      "4026.65"
+      "4023.76"
     ],
     [
       1782748800000,
@@ -711,7 +711,7 @@
   ],
   "strategy": {
     "signal": "waiting",
-    "price": 4026.65,
+    "price": 4023.76,
     "reason": "monitoring",
     "indicators": {
       "rsi": 50.82,
@@ -724,5 +724,5 @@
     "bigMove": "big_down",
     "stabilized": false
   },
-  "timestamp": 1782753789441
+  "timestamp": 1782754091808
 }
