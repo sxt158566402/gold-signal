@@ -564,16 +564,16 @@ function calcEMA(data, period){
 }
 
 async function fetchFromOKX(){
+  // 尝试Binance（CORS友好），失败则OKX
+  var apiBase = 'https://api.binance.com';
+  var symbol = 'PAXGUSDT';
   try{
-    var kr = await fetch('https://www.okx.com/api/v5/market/candles?instId=PAXG-USDT&bar=1H&limit=50');
-    var kd = await kr.json();
-    if(kd.code !== '0' || !kd.data || kd.data.length < 26) return null;
-    var tr = await fetch('https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT');
-    var td = await tr.json();
-    if(td.code !== '0' || !td.data || !td.data[0]) return null;
-    var tk = td.data[0];
-    var klines = kd.data.reverse();
-    var closes = klines.map(function(k){ return parseFloat(k[4]); });
+    var kr = await fetch(apiBase + '/api/v3/klines?symbol=' + symbol + '&interval=1h&limit=50');
+    var kData = await kr.json();
+    if(!Array.isArray(kData) || kData.length < 26) return null;
+    var tr = await fetch(apiBase + '/api/v3/ticker/24hr?symbol=' + symbol);
+    var tk = await tr.json();
+    var closes = kData.map(function(k){ return parseFloat(k[4]); });
     var gains = [], losses = [];
     for(var i=1; i<closes.length; i++){
       var diff = closes[i] - closes[i-1];
@@ -589,14 +589,12 @@ async function fetchFromOKX(){
     var bbData = closes.slice(-20);
     var bbMean = bbData.reduce(function(a,b){return a+b},0)/20;
     var bbStd = Math.sqrt(bbData.map(function(x){return Math.pow(x-bbMean,2)}).reduce(function(a,b){return a+b},0)/20);
-    var price = parseFloat(tk.last);
-    var sod = parseFloat(tk.sodUtc8);
-    var priceChange24 = sod > 0 ? price - sod : 0;
-    var priceChangePct24 = sod > 0 ? (priceChange24 / sod * 100) : 0;
+    var price = parseFloat(tk.lastPrice);
+    var priceChange24 = parseFloat(tk.priceChange);
+    var priceChangePct24 = parseFloat(tk.priceChangePercent);
     var price5m = price;
     var price5mAgo = closes[closes.length-2];
-    var priceChange5m = price5m - price5mAgo;
-    var priceChangePct5m = (priceChange5m / price5mAgo * 100);
+    var priceChangePct5m = (price5m - price5mAgo) / price5mAgo * 100;
     var signal = 'waiting';
     var reasons = [];
     if(rsi < 30) reasons.push('RSI超卖(' + rsi.toFixed(1) + ')');
