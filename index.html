@@ -747,7 +747,7 @@ async function fetchFromOKX(){
       timestamp: Date.now(),
       source: 'frontend-okx'
     };
-  } catch(e){ console.error('OKX fail:', e); return null; }
+  } catch(e){ console.error('OKX fail:', e); document.getElementById('dt').textContent = '❌ API失败: ' + e.message; return null; }
 }
 
 async function load(){
@@ -758,10 +758,11 @@ try{
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
-      if(age < 600) { d = jd; useFrontendData = false; }
+      if(age < 3600) { d = jd; useFrontendData = false; console.log('使用data.json, age=' + age + 's'); }
     }
-  } catch(e){}
+  } catch(e){ console.log('data.json失败:', e.message); }
   if(!d){
+    console.log('data.json不可用，尝试Bitget API...');
     d = await fetchFromOKX();
     if(d) useFrontendData = true;
   }
@@ -843,8 +844,9 @@ try{
     lastSignal = '';
   }
 } catch(e){
-  console.error(e);
-  sc(false, '斷線-重試中...');
+  console.error('load失败:', e);
+  sc(false, '断线: ' + e.message);
+  document.getElementById('dt').textContent = '❌ ' + e.message;
 }
 }
 function startApp(){
