@@ -1,11 +1,11 @@
 {
   "ticker": {
     "lastPrice": "4016.65",
-    "priceChange": "-1.43",
-    "priceChangePercent": "-1.43",
+    "priceChange": "-1.42",
+    "priceChangePercent": "-1.42",
     "highPrice": "4084.02",
     "lowPrice": "3999",
-    "volume": "111.933"
+    "volume": "111.874"
   },
   "klines": [
     [
@@ -724,5 +724,5 @@
     "bigMove": null,
     "stabilized": false
   },
-  "timestamp": 1782761622704
+  "timestamp": 1782761924450
 }
