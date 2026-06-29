@@ -514,8 +514,9 @@ function doLogoutUser(){
 
 var ae=false,sy=window.speechSynthesis;
 function sp(t){if(!ae||!sy)return;sy.cancel();var u=new SpeechSynthesisUtterance(t);u.rate=0.9;var v=sy.getVoices();var found=false;for(var i=0;i<v.length;i++){if(v[i].lang==='zh-CN'||v[i].lang==='zh-CN-x-ccu'){u.voice=v[i];u.lang='zh-CN';found=true;break;}}if(!found){for(var i=0;i<v.length;i++){if(v[i].lang.indexOf('zh')>=0){u.voice=v[i];u.lang=v[i].lang;found=true;break;}}}if(!found){u.lang='zh-CN';}try{sy.speak(u);}catch(e){}}
-function horn(){try{var ac=new(window.AudioContext||window.webkitAudioContext)();function beep(f,d,t){var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;g.gain.value=0.3;o.connect(g);g.connect(ac.destination);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+d);}beep(880,0.15,0);beep(1100,0.15,0.2);beep(880,0.15,0.4);beep(1320,0.3,0.6);}catch(e){}if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);}
-function ea(){ae=true;document.getElementById('ap').classList.add('hid');sp('语音提醒已启用');}
+var _ac=null;function getAC(){if(!_ac){try{_ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(_ac&&_ac.state==='suspended')_ac.resume();return _ac;}
+function horn(){var ac=getAC();if(!ac)return;function beep(f,d,t){var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;g.gain.value=0.3;o.connect(g);g.connect(ac.destination);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+d);}beep(880,0.15,0);beep(1100,0.15,0.2);beep(880,0.15,0.4);beep(1320,0.3,0.6);if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);}
+function ea(){ae=true;document.getElementById('ap').classList.add('hid');getAC();sp('语音提醒已启用');}
 function sc(ok,t){var e=document.getElementById('cs');e.className='conn '+(ok?'ok':'err');e.querySelector('.t').textContent=t||(ok?'已連接':'斷線');}
 function f(n,d){return parseFloat(n).toFixed(d||2);}
 function ft(ts){
@@ -651,6 +652,7 @@ try{
   var p = parseFloat(t.lastPrice);
   var c = parseFloat(t.priceChange);
   var cp = parseFloat(t.priceChangePercent);
+  if(isNaN(cp) && !isNaN(c) && p > 0) cp = (c / p * 100);
   
   document.getElementById('mp').textContent = '$' + f(p);
   document.getElementById('cv').textContent = (c>=0?'+':'') + f(c);
@@ -696,7 +698,7 @@ try{
     document.getElementById('lr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'long') {
       if(!isRiskDay){
-        sp('做多信號！進場價' + f(s.price) + '，記得止損！'); horn();
+        horn(); sp('做多信号！进场价' + f(s.price) + '，记得止损！');
       }
       lastSignal = 'long';
       // 记录信号
@@ -711,7 +713,7 @@ try{
     document.getElementById('sr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'short') {
       if(!isRiskDay){
-        sp('做空信號！進場價' + f(s.price) + '，記得止損！'); horn();
+        horn(); sp('做空信号！进场价' + f(s.price) + '，记得止损！');
       }
       lastSignal = 'short';
       // 记录信号
