@@ -414,16 +414,18 @@ function recordSignal(type, entry, sl, tp) {
 // 检查信号结果（根据当前价格判断止盈或止损）
 function checkSignalResults(currentPrice) {
   var updated = false;
+  var now = Date.now();
   signalHistory.forEach(function(s) {
     if (s.result !== 'pending') return;
+    var age = (now - s.ts) / 60000; // 分钟
     if (s.type === 'long') {
-      // 做多：价格>=tp则止盈，价格<=sl则止损
       if (currentPrice >= s.tp) { s.result = 'win'; updated = true; }
       else if (currentPrice <= s.sl) { s.result = 'lose'; updated = true; }
+      else if (age > 240) { s.result = 'draw'; updated = true; } // 4小时超时
     } else {
-      // 做空：价格<=tp则止盈，价格>=sl则止损
       if (currentPrice <= s.tp) { s.result = 'win'; updated = true; }
       else if (currentPrice >= s.sl) { s.result = 'lose'; updated = true; }
+      else if (age > 240) { s.result = 'draw'; updated = true; }
     }
   });
   if (updated) {
@@ -434,16 +436,17 @@ function checkSignalResults(currentPrice) {
 
 function updateStats() {
   var total = signalHistory.length;
-  var wins = signalHistory.filter(function(s) { return s.result === 'win'; }).length;
-  var longs = signalHistory.filter(function(s) { return s.type === 'long'; });
-  var shorts = signalHistory.filter(function(s) { return s.type === 'short'; });
+  var decided = signalHistory.filter(function(s) { return s.result === 'win' || s.result === 'lose'; });
+  var wins = decided.filter(function(s) { return s.result === 'win'; }).length;
+  var longs = decided.filter(function(s) { return s.type === 'long'; });
+  var shorts = decided.filter(function(s) { return s.type === 'short'; });
   var longWins = longs.filter(function(s) { return s.result === 'win'; }).length;
   var shortWins = shorts.filter(function(s) { return s.result === 'win'; }).length;
   
   document.getElementById('statTotal').textContent = total;
-  document.getElementById('statWin').textContent = total > 0 ? Math.round(wins / total * 100) + '%' : '0%';
-  document.getElementById('statLong').textContent = longs.length > 0 ? Math.round(longWins / longs.length * 100) + '%' : '0%';
-  document.getElementById('statShort').textContent = shorts.length > 0 ? Math.round(shortWins / shorts.length * 100) + '%' : '0%';
+  document.getElementById('statWin').textContent = decided.length > 0 ? Math.round(wins / decided.length * 100) + '%' : '-';
+  document.getElementById('statLong').textContent = longs.length > 0 ? Math.round(longWins / longs.length * 100) + '%' : '-';
+  document.getElementById('statShort').textContent = shorts.length > 0 ? Math.round(shortWins / shorts.length * 100) + '%' : '-';
 }
 
 
@@ -692,8 +695,8 @@ try{
   if(s.signal === 'long'){
     document.getElementById('ls').classList.remove('hid');
     document.getElementById('le').textContent = '$' + f(s.price);
-    document.getElementById('lsl').textContent = '$' + f(s.price - 3);
-    document.getElementById('ltp').textContent = '$' + f(s.price + 6);
+    document.getElementById('lsl').textContent = '$' + f(s.price - 10);
+    document.getElementById('ltp').textContent = '$' + f(s.price + 10);
     document.getElementById('lt').textContent = ft(d.timestamp);
     document.getElementById('lr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'long') {
@@ -702,13 +705,13 @@ try{
       }
       lastSignal = 'long';
       // 记录信号
-      recordSignal('long', s.price, s.price - 3, s.price + 6);
+      recordSignal('long', s.price, s.price - 10, s.price + 10);
     }
   } else if(s.signal === 'short'){
     document.getElementById('ss').classList.remove('hid');
     document.getElementById('se').textContent = '$' + f(s.price);
-    document.getElementById('ssl').textContent = '$' + f(s.price + 3);
-    document.getElementById('stp').textContent = '$' + f(s.price - 6);
+    document.getElementById('ssl').textContent = '$' + f(s.price + 10);
+    document.getElementById('stp').textContent = '$' + f(s.price - 10);
     document.getElementById('st').textContent = ft(d.timestamp);
     document.getElementById('sr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'short') {
@@ -717,7 +720,7 @@ try{
       }
       lastSignal = 'short';
       // 记录信号
-      recordSignal('short', s.price, s.price + 3, s.price - 6);
+      recordSignal('short', s.price, s.price + 10, s.price - 10);
     }
   } else {
     document.getElementById('sw').classList.remove('hid');
