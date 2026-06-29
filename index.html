@@ -98,9 +98,9 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div id="mainContent">
 <div class="ap" id="ap"><div class="api">
 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-<p style="font-size:18px;font-weight:700">點擊啟用語音提醒</p>
-<p class="s">信號觸發時語音播報：「可以下單了，記得止損！」</p>
-<button class="abtn" onclick="ea()">🔊 啟用喇叭提醒</button>
+<p style="font-size:18px;font-weight:700">点击启用语音提醒</p>
+<p class="s">信号触发时语音播报：「做多信号/做空信号，进场价xxx，记得止损！」</p>
+<button class="abtn" onclick="ea()">🔊 启用喇叭提醒</button>
 </div></div>
 <div class="offline-bar" id="offbar"></div>
 <header class="bar"><div class="logo">⚡ GoldSniper</div><div class="conn" id="cs"><span class="dot"></span><span class="t">連接中...</span></div></header>
@@ -569,10 +569,61 @@ function doLogoutUser(){
 }
 
 var ae=false,sy=window.speechSynthesis;
-function sp(t){if(!ae||!sy)return;sy.cancel();var u=new SpeechSynthesisUtterance(t);u.rate=0.9;var v=sy.getVoices();var found=false;for(var i=0;i<v.length;i++){if(v[i].lang==='zh-CN'||v[i].lang==='zh-CN-x-ccu'){u.voice=v[i];u.lang='zh-CN';found=true;break;}}if(!found){for(var i=0;i<v.length;i++){if(v[i].lang.indexOf('zh')>=0){u.voice=v[i];u.lang=v[i].lang;found=true;break;}}}if(!found){u.lang='zh-CN';}try{sy.speak(u);}catch(e){}}
-var _ac=null;function getAC(){if(!_ac){try{_ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(_ac&&_ac.state==='suspended')_ac.resume();return _ac;}
-function horn(){var ac=getAC();if(!ac)return;function beep(f,d,t){var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;g.gain.value=0.3;o.connect(g);g.connect(ac.destination);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+d);}beep(880,0.15,0);beep(1100,0.15,0.2);beep(880,0.15,0.4);beep(1320,0.3,0.6);if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);}
-function ea(){ae=true;document.getElementById('ap').classList.add('hid');getAC();sp('语音提醒已启用');}
+function sp(t){
+  if(!ae)return;
+  if(!sy){console.log('TTS not supported');return;}
+  sy.cancel();
+  var u=new SpeechSynthesisUtterance(t);
+  u.rate=0.85;
+  u.pitch=1.0;
+  u.volume=1.0;
+  u.lang='zh-CN';
+  var v=sy.getVoices();
+  for(var i=0;i<v.length;i++){
+    if(v[i].lang==='zh-CN'||v[i].lang==='zh-CN-x-ccu'||v[i].lang==='zh-CN-Standard'){
+      u.voice=v[i];
+      break;
+    }
+  }
+  try{
+    var silent=new SpeechSynthesisUtterance('');
+    silent.volume=0;
+    sy.speak(silent);
+    setTimeout(function(){sy.speak(u);},50);
+  }catch(e){console.log('TTS error',e);}
+}
+var _ac=null;
+function getAC(){
+  if(!_ac){try{_ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+  if(_ac&&_ac.state==='suspended')_ac.resume();
+  return _ac;
+}
+function horn(){
+  var ac=getAC();
+  if(!ac)return;
+  function beep(f,d,t){
+    var o=ac.createOscillator(),g=ac.createGain();
+    o.type='sine';
+    o.frequency.value=f;
+    g.gain.value=0.4;
+    o.connect(g);g.connect(ac.destination);
+    o.start(ac.currentTime+t);
+    o.stop(ac.currentTime+t+d);
+  }
+  beep(880,0.15,0);
+  beep(1100,0.15,0.2);
+  beep(880,0.15,0.4);
+  beep(1320,0.3,0.6);
+  if(navigator.vibrate){
+    try{navigator.vibrate([200,100,200,100,200]);}catch(e){}
+  }
+}
+function ea(){
+  ae=true;
+  document.getElementById('ap').classList.add('hid');
+  getAC();
+  setTimeout(function(){sp('语音提醒已启用');},300);
+}
 function sc(ok,t){var e=document.getElementById('cs');e.className='conn '+(ok?'ok':'err');e.querySelector('.t').textContent=t||(ok?'已連接':'斷線');}
 function f(n,d){return parseFloat(n).toFixed(d||2);}
 function ft(ts){
