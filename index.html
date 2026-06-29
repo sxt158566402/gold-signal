@@ -518,7 +518,16 @@ function vb(){if(navigator.vibrate)navigator.vibrate([200,100,200]);}
 function ea(){ae=true;document.getElementById('ap').classList.add('hid');sp('語音提醒已啟用');}
 function sc(ok,t){var e=document.getElementById('cs');e.className='conn '+(ok?'ok':'err');e.querySelector('.t').textContent=t||(ok?'已連接':'斷線');}
 function f(n,d){return parseFloat(n).toFixed(d||2);}
-function ft(ts){var d=new Date(ts);var beijingTime = new Date(d.getTime() + (8 * 60 * 60 * 1000));return beijingTime.getHours().toString().padStart(2,'0')+':'+beijingTime.getMinutes().toString().padStart(2,'0')+':'+beijingTime.getSeconds().toString().padStart(2,'0');}
+function ft(ts){
+  var d=new Date(ts);
+  var beijingTime = new Date(d.getTime() + (8 * 60 * 60 * 1000));
+  var month = (beijingTime.getMonth()+1).toString().padStart(2,'0');
+  var day = beijingTime.getDate().toString().padStart(2,'0');
+  var hours = beijingTime.getHours().toString().padStart(2,'0');
+  var mins = beijingTime.getMinutes().toString().padStart(2,'0');
+  var secs = beijingTime.getSeconds().toString().padStart(2,'0');
+  return month+'-'+day+' '+hours+':'+mins+':'+secs;
+}
 if(sy){sy.getVoices();sy.onvoiceschanged=function(){sy.getVoices();};}
 
 var lastSignal = '', lastTs = 0;
