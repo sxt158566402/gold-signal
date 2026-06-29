@@ -638,7 +638,7 @@ try{
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
-      if(age < 180) { d = jd; useFrontendData = false; }
+      if(age < 600) { d = jd; useFrontendData = false; }
     }
   } catch(e){}
   if(!d){
