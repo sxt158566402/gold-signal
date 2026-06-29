@@ -650,8 +650,11 @@ async function checkRiskAlerts(){
   var risks = [];
   isRiskDay = false; // 重置
   
-  // 周五晚上 20:00-24:00 风险提醒
-  if(now.getDay() === 5 && now.getHours() >= 20){
+  // 周五晚上 20:00-24:00 风险提醒（强制北京时间）
+  var beijingNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+  var beijingDay = beijingNow.getUTCDay();
+  var beijingHour = beijingNow.getUTCHours();
+  if(beijingDay === 5 && beijingHour >= 20){
     risks.push('🖤 <b>黑色星期五</b>：今晚波动极大，建议观望或轻仓！');
     isRiskDay = true;
   }
@@ -661,9 +664,10 @@ async function checkRiskAlerts(){
     var resp = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json');
     var events = await resp.json();
     
-    // 筛选今天或明天的高影响经济数据
-    var today = now.toISOString().split('T')[0];
-    var tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+    // 筛选今天或明天的高影响经济数据（北京时间）
+    var beijingNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    var today = beijingNow.toISOString().split('T')[0];
+    var tomorrow = new Date(beijingNow.getTime() + 86400000).toISOString().split('T')[0];
     
     events.forEach(function(evt){
       if(evt.impact === 'High' && (evt.date.startsWith(today) || evt.date.startsWith(tomorrow))){
