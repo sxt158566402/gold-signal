@@ -701,37 +701,49 @@ async function fetchFromOKX(){
     var price = parseFloat(tk.lastPr);
     var priceChange24 = parseFloat(tk.open) > 0 ? (price - parseFloat(tk.open)) : 0;
     var priceChangePct24 = parseFloat(tk.change24h) * 100;
-    var price5m = price;
-    var price5mAgo = closes[closes.length-2];
-    var priceChangePct5m = (price5m - price5mAgo) / price5mAgo * 100;
+    var curH = price;
+    var prevH = closes[closes.length-2];
+    var prev2H = closes.length > 2 ? closes[closes.length-3] : prevH;
+    var priceChangeCurH = (curH - prevH) / prevH * 100;
+    // 企稳判断：最近2根K线波动幅度 < 0.15% = 企稳中
+    var volatility = Math.abs(curH - prevH) / prevH * 100;
+    var volatilityPrev = Math.abs(prevH - prev2H) / prev2H * 100;
+    var isStable = volatility < 0.12 && volatilityPrev < 0.15;
+    // 大涨大跌判断：单根K线波动 > 0.3% = 大行情
+    var isBigMove = volatility > 0.3;
+    // 趋势方向（EMA7 vs EMA25）
+    var trendUp = ema7 > ema25;
+    var trendDown = ema7 < ema25;
     var signal = 'waiting';
     var reasons = [];
     if(rsi < 30) reasons.push('RSI超卖(' + rsi.toFixed(1) + ')');
     else if(rsi > 70) reasons.push('RSI超买(' + rsi.toFixed(1) + ')');
-    if(ema7 > ema25) reasons.push('EMA金叉'); else reasons.push('EMA死叉');
-    if(priceChangePct5m < -0.1) reasons.push('短期跌' + priceChangePct5m.toFixed(2) + '%');
-    else if(priceChangePct5m > 0.1) reasons.push('短期涨' + priceChangePct5m.toFixed(2) + '%');
+    if(trendUp) reasons.push('EMA金叉(趋势看多)'); else reasons.push('EMA死叉(趋势看空)');
+    if(priceChangeCurH < -0.1) reasons.push('本小时跌' + priceChangeCurH.toFixed(2) + '%');
+    else if(priceChangeCurH > 0.1) reasons.push('本小时涨' + priceChangeCurH.toFixed(2) + '%');
     if(price < bbMean-2*bbStd) reasons.push('价格低于布林下轨');
     else if(price > bbMean+2*bbStd) reasons.push('价格突破布林上轨');
+    if(isStable) reasons.push('波动收敛(企稳)');
+    else if(isBigMove) reasons.push('大幅波动(观望)');
     var bullScore = 0;
-    if(rsi < 35) bullScore++;
-    if(rsi < 25) bullScore++;
-    if(ema7 > ema25) bullScore++;
-    if(priceChangePct5m < -0.15) bullScore++;
-    if(price < bbMean-2*bbStd) bullScore++;
-    if(price < ema25) bullScore++;
+    if(trendUp) bullScore++;           // 趋势必须看多
+    if(rsi < 40 && rsi > 25) bullScore++;  // RSI回调区（非超跌）
+    if(price > ema25) bullScore++;     // 价格在EMA25上方
+    if(price > bbMean) bullScore++;    // 价格在布林中轨上方
+    if(priceChangeCurH > 0 && priceChangeCurH < 0.2) bullScore++; // 小幅上涨（企稳反弹）
     var bearScore = 0;
-    if(rsi > 65) bearScore++;
-    if(rsi > 75) bearScore++;
-    if(ema7 < ema25) bearScore++;
-    if(priceChangePct5m > 0.15) bearScore++;
-    if(price > bbMean+2*bbStd) bearScore++;
-    if(price > ema25) bearScore++;
-    if(bullScore >= 3) signal = 'long';
-    else if(bearScore >= 3) signal = 'short';
+    if(trendDown) bearScore++;          // 趋势必须看空
+    if(rsi < 75 && rsi > 60) bearScore++; // RSI回落区（非超涨）
+    if(price < ema25) bearScore++;     // 价格在EMA25下方
+    if(price < bbMean) bearScore++;    // 价格在布林中轨下方
+    if(priceChangeCurH < 0 && priceChangeCurH > -0.2) bearScore++; // 小幅下跌（企稳回落）
+    // 必须同时满足：趋势一致 + 企稳 + 不在大行情中
+    if(bullScore >= 3 && !isBigMove) signal = 'long';
+    else if(bearScore >= 3 && !isBigMove) signal = 'short';
+    if(isBigMove && signal !== 'waiting') { signal = 'waiting'; reasons.push('⚠️大行情企稳后再进'); }
     return {
       ticker: { lastPrice: tk.lastPr, priceChange: priceChange24.toString(), priceChangePercent: priceChangePct24.toFixed(2), highPrice: parseFloat(tk.high24h), lowPrice: parseFloat(tk.low24h) },
-      strategy: { signal: signal, price: price, reason: reasons.join(' | '), indicators: { rsi: rsi, ema7: ema7, ema25: ema25, bbUpper: bbMean+2*bbStd, bbMiddle: bbMean, bbLower: bbMean-2*bbStd, priceChange5m: priceChangePct5m } },
+      strategy: { signal: signal, price: price, reason: reasons.join(' | '), indicators: { rsi: rsi, ema7: ema7, ema25: ema25, bbUpper: bbMean+2*bbStd, bbMiddle: bbMean, bbLower: bbMean-2*bbStd, volatility: volatility.toFixed(3), stable: isStable } },
       timestamp: Date.now(),
       source: 'frontend-okx'
     };
