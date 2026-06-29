@@ -1,19 +1,26 @@
 {
   "ticker": {
-    "lastPrice": "4020.51",
-    "priceChange": "-1.32",
-    "priceChangePercent": "-1.32",
+    "lastPrice": "4021.22",
+    "priceChange": "-1.31",
+    "priceChangePercent": "-1.31",
     "highPrice": "4084.02",
     "lowPrice": "3999",
-    "volume": "111.879"
+    "volume": "111.9"
   },
   "klines": [
+    [
+      1782756000000,
+      "4020.78",
+      "4021.22",
+      "4020.78",
+      "4021.22"
+    ],
     [
       1782752400000,
       "4021.98",
       "4029.21",
       "4019.26",
-      "4020.51"
+      "4019.72"
     ],
     [
       1782748800000,
@@ -700,29 +707,22 @@
       "4040.3",
       "4004.57",
       "4039.12"
-    ],
-    [
-      1782396000000,
-      "4000.75",
-      "4027.16",
-      "3999.31",
-      "4011.53"
     ]
   ],
   "strategy": {
     "signal": "waiting",
-    "price": 4020.51,
+    "price": 4021.22,
     "reason": "monitoring",
     "indicators": {
-      "rsi": 50.82,
-      "ema7": 4025.64,
-      "ema25": 4033.11,
-      "bbUpper": 4048.18,
-      "bbMiddle": 4022.39,
-      "bbLower": 3996.61
+      "rsi": 65.73,
+      "ema7": 4030.34,
+      "ema25": 4034.9,
+      "bbUpper": 4052.51,
+      "bbMiddle": 4024.38,
+      "bbLower": 3996.24
     },
-    "bigMove": "big_down",
+    "bigMove": null,
     "stabilized": false
   },
-  "timestamp": 1782755899029
+  "timestamp": 1782756200651
 }
