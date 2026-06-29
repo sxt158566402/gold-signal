@@ -328,8 +328,23 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <select id="calcPV" onchange="document.getElementById('calcPVVal').value=this.value" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
 <option value="0.01">PAXG迷你 (1点=$0.01)</option>
 <option value="0.1">PAXG微型 (1点=$0.1)</option>
-<option value="1" selected>标准合约 (1点=$1)</option>
+<option value="1" selected>标准 (1点=$1, 100盎司/手)</option>
 <option value="10">大合约 (1点=$10)</option>
+</select>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<div style="flex:1">
+<div style="font-size:11px;color:#888;margin-bottom:4px">杠杆倍数</div>
+<select id="calcLeverage" style="width:100%;padding:10px;border:1px solid #2a2a35;border-radius:6px;background:#0a0a0f;color:#e8e8f0;font-size:13px;outline:none">
+<option value="50">1:50</option>
+<option value="100">1:100</option>
+<option value="200">1:200</option>
+<option value="500">1:500</option>
+<option value="1000" selected>1:1000</option>
+<option value="2000">1:2000</option>
+<option value="3000">1:3000</option>
+<option value="5000">1:5000</option>
 </select>
 </div>
 </div>
@@ -382,6 +397,7 @@ function calcPosition() {
   var slPoints = parseFloat(document.getElementById('calcSL').value);
   var price = parseFloat(document.getElementById('calcPrice').value);
   var pointValue = parseFloat(document.getElementById('calcPV').value) || 0.01;
+  var leverage = parseFloat(document.getElementById('calcLeverage').value) || 1000;
   
   if (!balance || !riskPercent || !slPoints || !price) {
     alert('请填写所有参数');
@@ -390,28 +406,43 @@ function calcPosition() {
   
   // 计算风险金额
   var riskAmount = balance * (riskPercent / 100);
-  // 计算建议手数
+  // 计算建议手数（基于止损风险）
   var lots = riskAmount / (slPoints * pointValue);
   // 标准化到0.01手
   lots = Math.round(lots * 100) / 100;
   if (lots > 100) lots = 100;
   
-  // 估算保证金
-  // PAXG ~$4000/盎司，1手=100盎司(标准)，保证金=合约价值/杠杆
+  // 估算保证金: 1手 = 100盎司, 合约价值 = 100 * price
+  var contractSize = 100; // 1手=100盎司
   var approxPrice = price || 4000;
-  var marginPerLot = approxPrice * 100 / 1000; // 假设1:1000杠杆
+  var marginPerLot = (contractSize * approxPrice) / leverage;
   var marginNeeded = marginPerLot * lots;
+  var marginPercent = (marginNeeded / balance) * 100;
+  
+  // 如果保证金占比>50%，自动建议更小手数
+  var safeLots = Math.floor((balance * 0.3 / marginPerLot) * 100) / 100; // 30%安全线
+  var finalLots = lots;
+  var warning = '';
+  if (marginPercent > 50) {
+    finalLots = safeLots;
+    warning = '<div style="margin-bottom:6px;font-size:12px;color:#ff4757;font-weight:700">⚠️ ' + lots + '手保证金占' + marginPercent.toFixed(1) + '%，过高！建议降低到 ' + finalLots + '手以内</div>';
+  }
+  
+  var finalMargin = marginPerLot * finalLots;
   
   var html = '';
   html += '<div style="margin-bottom:6px">💰 账户资金: <span style="color:#FFD700;font-weight:700">$' + balance.toFixed(2) + '</span></div>';
   html += '<div style="margin-bottom:6px">⚠️ 风险金额: <span style="color:#ff4757;font-weight:700">$' + riskAmount.toFixed(2) + '</span> (' + riskPercent + '%)</div>';
   html += '<div style="margin-bottom:6px">📉 止损点数: <span style="color:#ff4757;font-weight:700">' + slPoints + '点</span></div>';
   html += '<div style="margin-bottom:6px">💲 每手点值: <span style="color:#FFD700;font-weight:700">$' + pointValue + '</span></div>';
-  html += '<div style="margin-bottom:6px">📊 建议手数: <span style="color:#2ed573;font-weight:700;font-size:16px">' + lots + '手</span></div>';
-  html += '<div style="margin-bottom:6px;font-size:11px;color:#aaa">💰 预估保证金(1:1000): <span style="color:#FFA500;font-weight:700">$' + marginNeeded.toFixed(2) + '</span></div>';
-  html += '<div style="margin-bottom:6px;font-size:11px;color:#aaa">📈 保证金占比: <span style="color:' + (marginNeeded/balance*100 > 50 ? '#ff4757' : '#2ed573') + ';font-weight:700">' + (marginNeeded/balance*100).toFixed(1) + '%</span></div>';
-  html += '<div style="font-size:11px;color:#888;margin-top:8px">💡 公式: $' + balance + ' × ' + riskPercent + '% ÷ (' + slPoints + '点 × $' + pointValue + ') = ' + lots + '手</div>';
-  html += '<div style="font-size:11px;color:#ff4757;margin-top:4px">⚠️ 保证金占比超50%请降低手数！</div>';
+  html += '<div style="margin-bottom:6px">📋 杠杆: <span style="color:#1e90ff;font-weight:700">1:' + leverage + '</span></div>';
+  html += warning;
+  html += '<div style="margin-bottom:6px">📊 建议手数: <span style="color:#2ed573;font-weight:700;font-size:18px">' + finalLots + '手</span></div>';
+  html += '<div style="margin-bottom:6px;font-size:11px;color:#aaa">💰 每手保证金: <span style="color:#FFA500;font-weight:700">$' + marginPerLot.toFixed(2) + '</span></div>';
+  html += '<div style="margin-bottom:6px;font-size:11px;color:#aaa">💰 总保证金: <span style="color:#FFA500;font-weight:700">$' + finalMargin.toFixed(2) + '</span></div>';
+  html += '<div style="margin-bottom:6px;font-size:11px;color:#aaa">📈 保证金占比: <span style="color:' + (finalMargin/balance*100 > 30 ? '#ff4757' : '#2ed573') + ';font-weight:700">' + (finalMargin/balance*100).toFixed(1) + '%</span></div>';
+  html += '<div style="margin-bottom:6px;font-size:11px;color:#aaa">💸 最大亏损(止损): <span style="color:#ff4757;font-weight:700">$' + riskAmount.toFixed(2) + '</span></div>';
+  html += '<div style="font-size:11px;color:#888;margin-top:8px">💡 公式: $' + balance + ' × ' + riskPercent + '% ÷ (' + slPoints + ' × $' + pointValue + ') = ' + lots + '手</div>';
   
   document.getElementById('calcResultText').innerHTML = html;
   document.getElementById('calcResult').style.display = 'block';
