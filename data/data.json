@@ -1,26 +1,26 @@
 {
   "ticker": {
     "symbol": "PAXGUSDT",
-    "priceChange": "-14.00000000",
-    "priceChangePercent": "-0.343",
-    "weightedAvgPrice": "4070.29596897",
-    "prevClosePrice": "4076.56000000",
+    "priceChange": "-14.44000000",
+    "priceChangePercent": "-0.354",
+    "weightedAvgPrice": "4070.28991172",
+    "prevClosePrice": "4077.00000000",
     "lastPrice": 4062.56,
-    "lastQty": "0.10800000",
+    "lastQty": "0.06980000",
     "bidPrice": "4062.55000000",
-    "bidQty": "0.02630000",
+    "bidQty": "0.94910000",
     "askPrice": "4062.56000000",
-    "askQty": "5.01120000",
-    "openPrice": "4076.56000000",
+    "askQty": "0.00460000",
+    "openPrice": "4077.00000000",
     "highPrice": 4081.64,
     "lowPrice": 4045.94,
-    "volume": "1627.33600000",
-    "quoteVolume": "6623739.16096700",
-    "openTime": 1782619866949,
-    "closeTime": 1782706266949,
-    "firstId": 48640178,
-    "lastId": 48670797,
-    "count": 30620
+    "volume": "1627.12680000",
+    "quoteVolume": "6622877.79913300",
+    "openTime": 1782619994328,
+    "closeTime": 1782706394328,
+    "firstId": 48640195,
+    "lastId": 48670822,
+    "count": 30628
   },
   "klines": [],
   "strategy": {
@@ -36,5 +36,5 @@
       "bbLower": 4062.56
     }
   },
-  "timestamp": 1782706274002
+  "timestamp": 1782706395750
 }
