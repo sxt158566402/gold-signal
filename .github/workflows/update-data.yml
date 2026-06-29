@@ -1,0 +1,26 @@
+name: Update Gold Data
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Fetch data
+        run: python3 scripts/update.py
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Commit and push
+        run: |
+          git config user.email "sxt158566402@qq.com"
+          git config user.name "sxt158"
+          git add data/data.json
+          git diff --cached --quiet || git commit -m "update $(cat data/data.json | python3 -c 'import sys,json;print(json.load(sys.stdin)["ticker"]["lastPrice"])')"
+          git push
