@@ -519,13 +519,12 @@ function ea(){ae=true;document.getElementById('ap').classList.add('hid');sp('語
 function sc(ok,t){var e=document.getElementById('cs');e.className='conn '+(ok?'ok':'err');e.querySelector('.t').textContent=t||(ok?'已連接':'斷線');}
 function f(n,d){return parseFloat(n).toFixed(d||2);}
 function ft(ts){
-  var d=new Date(ts);
-  var beijingTime = new Date(d.getTime() + (8 * 60 * 60 * 1000));
-  var month = (beijingTime.getMonth()+1).toString().padStart(2,'0');
-  var day = beijingTime.getDate().toString().padStart(2,'0');
-  var hours = beijingTime.getHours().toString().padStart(2,'0');
-  var mins = beijingTime.getMinutes().toString().padStart(2,'0');
-  var secs = beijingTime.getSeconds().toString().padStart(2,'0');
+  var d = new Date(ts);
+  var month = (d.getMonth()+1).toString().padStart(2,'0');
+  var day = d.getDate().toString().padStart(2,'0');
+  var hours = d.getHours().toString().padStart(2,'0');
+  var mins = d.getMinutes().toString().padStart(2,'0');
+  var secs = d.getSeconds().toString().padStart(2,'0');
   return month+'-'+day+' '+hours+':'+mins+':'+secs;
 }
 if(sy){sy.getVoices();sy.onvoiceschanged=function(){sy.getVoices();};}
@@ -650,10 +649,9 @@ async function checkRiskAlerts(){
   var risks = [];
   isRiskDay = false; // 重置
   
-  // 周五晚上 20:00-24:00 风险提醒（强制北京时间）
-  var beijingNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-  var beijingDay = beijingNow.getUTCDay();
-  var beijingHour = beijingNow.getUTCHours();
+  // 周五晚上 20:00-24:00 风险提醒（北京时间）
+  var beijingDay = now.getDay();
+  var beijingHour = now.getHours();
   if(beijingDay === 5 && beijingHour >= 20){
     risks.push('🖤 <b>黑色星期五</b>：今晚波动极大，建议观望或轻仓！');
     isRiskDay = true;
@@ -664,10 +662,9 @@ async function checkRiskAlerts(){
     var resp = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json');
     var events = await resp.json();
     
-    // 筛选今天或明天的高影响经济数据（北京时间）
-    var beijingNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-    var today = beijingNow.toISOString().split('T')[0];
-    var tomorrow = new Date(beijingNow.getTime() + 86400000).toISOString().split('T')[0];
+    // 筛选今天或明天的高影响经济数据
+    var today = now.toISOString().split('T')[0];
+    var tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
     
     events.forEach(function(evt){
       if(evt.impact === 'High' && (evt.date.startsWith(today) || evt.date.startsWith(tomorrow))){
