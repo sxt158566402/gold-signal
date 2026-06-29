@@ -551,11 +551,102 @@ function checkStale(){
 }
 setInterval(checkStale, 10000);
 
+/* ===== 前端直接从OKX获取数据（防掉线） ===== */
+var useFrontendData = false;
+
+function calcEMA(data, period){
+  var k = 2 / (period + 1);
+  var ema = data[0];
+  for(var i=1; i<data.length; i++){
+    ema = data[i] * k + ema * (1-k);
+  }
+  return ema;
+}
+
+async function fetchFromOKX(){
+  try{
+    var kr = await fetch('https://www.okx.com/api/v5/market/candles?instId=PAXG-USDT&bar=1H&limit=50');
+    var kd = await kr.json();
+    if(kd.code !== '0' || !kd.data || kd.data.length < 26) return null;
+    var tr = await fetch('https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT');
+    var td = await tr.json();
+    if(td.code !== '0' || !td.data || !td.data[0]) return null;
+    var tk = td.data[0];
+    var klines = kd.data.reverse();
+    var closes = klines.map(function(k){ return parseFloat(k[4]); });
+    var gains = [], losses = [];
+    for(var i=1; i<closes.length; i++){
+      var diff = closes[i] - closes[i-1];
+      gains.push(diff > 0 ? diff : 0);
+      losses.push(diff < 0 ? Math.abs(diff) : 0);
+    }
+    var avgGain = gains.slice(-14).reduce(function(a,b){return a+b},0)/14;
+    var avgLoss = losses.slice(-14).reduce(function(a,b){return a+b},0)/14;
+    var rs = avgLoss === 0 ? 100 : avgGain/avgLoss;
+    var rsi = 100 - (100/(1+rs));
+    var ema7 = calcEMA(closes, 7);
+    var ema25 = calcEMA(closes, 25);
+    var bbData = closes.slice(-20);
+    var bbMean = bbData.reduce(function(a,b){return a+b},0)/20;
+    var bbStd = Math.sqrt(bbData.map(function(x){return Math.pow(x-bbMean,2)}).reduce(function(a,b){return a+b},0)/20);
+    var price = parseFloat(tk.last);
+    var sod = parseFloat(tk.sodUtc8);
+    var priceChange24 = sod > 0 ? price - sod : 0;
+    var priceChangePct24 = sod > 0 ? (priceChange24 / sod * 100) : 0;
+    var price5m = price;
+    var price5mAgo = closes[closes.length-2];
+    var priceChange5m = price5m - price5mAgo;
+    var priceChangePct5m = (priceChange5m / price5mAgo * 100);
+    var signal = 'waiting';
+    var reasons = [];
+    if(rsi < 30) reasons.push('RSI超卖(' + rsi.toFixed(1) + ')');
+    else if(rsi > 70) reasons.push('RSI超买(' + rsi.toFixed(1) + ')');
+    if(ema7 > ema25) reasons.push('EMA金叉'); else reasons.push('EMA死叉');
+    if(priceChangePct5m < -0.1) reasons.push('短期跌' + priceChangePct5m.toFixed(2) + '%');
+    else if(priceChangePct5m > 0.1) reasons.push('短期涨' + priceChangePct5m.toFixed(2) + '%');
+    if(price < bbMean-2*bbStd) reasons.push('价格低于布林下轨');
+    else if(price > bbMean+2*bbStd) reasons.push('价格突破布林上轨');
+    var bullScore = 0;
+    if(rsi < 35) bullScore++;
+    if(rsi < 25) bullScore++;
+    if(ema7 > ema25) bullScore++;
+    if(priceChangePct5m < -0.15) bullScore++;
+    if(price < bbMean-2*bbStd) bullScore++;
+    if(price < ema25) bullScore++;
+    var bearScore = 0;
+    if(rsi > 65) bearScore++;
+    if(rsi > 75) bearScore++;
+    if(ema7 < ema25) bearScore++;
+    if(priceChangePct5m > 0.15) bearScore++;
+    if(price > bbMean+2*bbStd) bearScore++;
+    if(price > ema25) bearScore++;
+    if(bullScore >= 3) signal = 'long';
+    else if(bearScore >= 3) signal = 'short';
+    return {
+      ticker: { lastPrice: price.toString(), priceChange: priceChange24.toString(), priceChangePercent: priceChangePct24.toString(), highPrice: parseFloat(tk.hi24h), lowPrice: parseFloat(tk.lo24h) },
+      strategy: { signal: signal, price: price, reason: reasons.join(' | '), indicators: { rsi: rsi, ema7: ema7, ema25: ema25, bbUpper: bbMean+2*bbStd, bbMiddle: bbMean, bbLower: bbMean-2*bbStd, priceChange5m: priceChangePct5m } },
+      timestamp: Date.now(),
+      source: 'frontend-okx'
+    };
+  } catch(e){ console.error('OKX fail:', e); return null; }
+}
+
 async function load(){
 try{
-  var r = await fetch('data/data.json?t=' + Date.now(), {cache:'no-store'});
-  var d = await r.json();
-  if(d.error) throw new Error(d.error);
+  var d = null;
+  try{
+    var r = await fetch('data/data.json?t=' + Date.now(), {cache:'no-store'});
+    var jd = await r.json();
+    if(!jd.error) {
+      var age = (Date.now() - jd.timestamp) / 1000;
+      if(age < 180) { d = jd; useFrontendData = false; }
+    }
+  } catch(e){}
+  if(!d){
+    d = await fetchFromOKX();
+    if(d) useFrontendData = true;
+  }
+  if(!d) throw new Error('No data available');
   var t = d.ticker;
   var s = d.strategy;
   var p = parseFloat(t.lastPrice);
@@ -576,8 +667,9 @@ try{
   
   lastTs = d.timestamp;
   var age = Math.floor((Date.now() - d.timestamp) / 1000);
+  var src = d.source === 'frontend-okx' ? ' | 📡前端模式' : '';
   var status = age < 90 ? '✅ 實時' : '⚠️ 延遲 ' + age + '秒';
-  document.getElementById('dt').textContent = '更新: ' + ft(d.timestamp) + ' | ' + status;
+  document.getElementById('dt').textContent = '更新: ' + ft(d.timestamp) + ' | ' + status + src;
   sc(true, '已連接');
   
   document.getElementById('sw').classList.add('hid');
