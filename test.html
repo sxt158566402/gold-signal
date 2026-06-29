@@ -2,30 +2,30 @@
 <html>
 <head><meta charset="UTF-8"><title>API测试</title></head>
 <body>
-<h2>OKX API 测试</h2>
+<h2>Bitget API 测试</h2>
 <div id="result">加载中...</div>
 <script>
 async function test(){
   var div = document.getElementById('result');
   try{
-    // 测试OKX
-    div.innerHTML = '正在请求OKX API...';
+    div.innerHTML = '正在请求Bitget API...';
     var t1 = Date.now();
-    var kr = await fetch('https://www.okx.com/api/v5/market/ticker?instId=PAXG-USDT');
+    var kr = await fetch('https://api.bitget.com/api/v2/spot/market/tickers?symbol=PAXGUSDT');
     var td = await kr.json();
     var t2 = Date.now();
-    if(td.code === '0' && td.data && td.data[0]){
+    if(td.code === '00000' && td.data && td.data[0]){
       var tk = td.data[0];
-      div.innerHTML = '<h3 style="color:green">✅ OKX API正常!</h3>' +
-        '<p>价格: $' + tk.last + '</p>' +
+      div.innerHTML = '<h3 style="color:green">✅ Bitget API正常!</h3>' +
+        '<p>价格: $' + tk.lastPr + '</p>' +
         '<p>24h最高: $' + tk.high24h + '</p>' +
         '<p>24h最低: $' + tk.low24h + '</p>' +
-        '<p>耗时: ' + (t2-t1) + 'ms</p>';
+        '<p>耗时: ' + (t2-t1) + 'ms</p>' +
+        '<p><a href="index.html">← 返回主页</a></p>';
     } else {
-      div.innerHTML = '<h3 style="color:red">❌ OKX返回异常: ' + JSON.stringify(td).substring(0,200) + '</h3>';
+      div.innerHTML = '<h3 style="color:red">❌ 返回异常: ' + JSON.stringify(td).substring(0,300) + '</h3>';
     }
   } catch(e){
-    div.innerHTML = '<h3 style="color:red">❌ 错误: ' + e.message + '</h3>';
+    div.innerHTML = '<h3 style="color:red">❌ 错误: ' + e.message + '</h3><p>可能是网络问题</p>';
   }
 }
 test();
