@@ -71,20 +71,19 @@ trend_up = ema7 > ema25
 trend_down = ema7 < ema25
 cur_h_change = (price - prev_h) / prev_h * 100
 
-# Scoring
-bull = 0
-if trend_up: bull += 1
-if 25 < rsi < 40: bull += 1
-if price > ema25: bull += 1
-if price > bb_mean: bull += 1
-if 0 < cur_h_change < 0.2: bull += 1
+# === 新策略：大涨/大跌后横盘震荡 → 反向操作 ===
+# 计算近6小时涨跌幅（大涨/大跌判断）
+h6_change = (price - closes[-7]) / closes[-7] * 100 if len(closes) >= 7 else 0
 
-bear = 0
-if trend_down: bear += 1
-if 60 < rsi < 75: bear += 1
-if price < ema25: bear += 1
-if price < bb_mean: bear += 1
-if -0.2 < cur_h_change < 0: bear += 1
+# 大涨：6小时涨幅 > 1.5%
+is_surge = h6_change > 1.5
+# 大跌：6小时跌幅 > 1.5%
+is_dump = h6_change < -1.5
+# 横盘震荡：当前波动收敛 + RSI回到中性区
+is_oscillating = is_stable and (40 < rsi < 60)
+# 震荡中但还偏高/偏低
+is_osc_high = is_stable and rsi >= 50  # 震荡偏高→做空
+is_osc_low = is_stable and rsi <= 50   # 震荡偏低→做多
 
 signal = 'waiting'
 reasons = []
@@ -92,19 +91,40 @@ if trend_up: reasons.append('EMA金叉')
 else: reasons.append('EMA死叉')
 if rsi < 30: reasons.append(f'RSI超卖({rsi:.1f})')
 elif rsi > 70: reasons.append(f'RSI超买({rsi:.1f})')
-if is_stable: reasons.append('波动收敛(企稳)')
+if is_stable: reasons.append('波动收敛(震荡中)')
 elif is_big_move: reasons.append('大幅波动(观望)')
+reasons.append(f'6h涨跌{h6_change:+.2f}%')
 
-if bull >= 3 and not is_big_move:
-    signal = 'long'
-    reasons.insert(0, '做多信号')
-elif bear >= 3 and not is_big_move:
+# 策略1：大涨后横盘震荡 → 高位做空
+if is_surge and is_osc_high and not is_big_move:
     signal = 'short'
-    reasons.insert(0, '做空信号')
-
-if is_big_move and signal != 'waiting':
+    reasons.insert(0, '🔊大涨后横盘→高位做空')
+# 策略2：大跌后横盘震荡 → 低位做多
+elif is_dump and is_osc_low and not is_big_move:
+    signal = 'long'
+    reasons.insert(0, '🔊大跌后横盘→低位做多')
+# 策略3：大行情中 → 观望
+elif is_big_move:
     signal = 'waiting'
     reasons.append('⚠️大行情企稳后再进')
+# 策略4：原有趋势策略（备用）
+else:
+    bull = 0
+    if trend_up: bull += 1
+    if 25 < rsi < 40: bull += 1
+    if price > ema25: bull += 1
+    if price > bb_mean: bull += 1
+    bear = 0
+    if trend_down: bear += 1
+    if 60 < rsi < 75: bear += 1
+    if price < ema25: bear += 1
+    if price < bb_mean: bear += 1
+    if bull >= 3 and not is_big_move:
+        signal = 'long'
+        reasons.insert(0, '做多信号')
+    elif bear >= 3 and not is_big_move:
+        signal = 'short'
+        reasons.insert(0, '做空信号')
 
 print(f'RSI={rsi:.1f} EMA7={ema7:.1f} EMA25={ema25:.1f} Signal={signal}')
 
