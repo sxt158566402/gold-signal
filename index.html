@@ -657,15 +657,15 @@ function checkStale(){
     el.classList.remove('show');
   }
 }
-setInterval(checkStale, 10000);
+/* ===== 数据源控制 ===== */
+var autoSync = null;
 
 function forceRefresh(){
   watchdogFailCount = 0;
   currentApiIdx = 0;
   lastGoodData = null;
-  console.log('🔄 强制刷新');
+  if(typeof autoSync!=='undefined' && autoSync) clearInterval(autoSync);
   load();
-  if(typeof autoSync!=='undefined') clearInterval(autoSync);
   autoSync = setInterval(load, 30000);
 }
 
@@ -926,8 +926,8 @@ try{
 }
 function startApp(){
   load();
-  setInterval(load, 30000);
-  checkRiskAlerts(); // 检查风险提醒
+  autoSync = setInterval(load, 30000);
+  checkRiskAlerts();
 }
 
 /* ===== 风险提醒：周五晚上 + 经济数据 ===== */
