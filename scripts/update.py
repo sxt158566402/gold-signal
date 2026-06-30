@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-import json, urllib.request, datetime, os, sys, base64, math, time
-
-token = os.environ.get('GH_TOKEN', '')
-if not token:
-    print('ERROR: No GH_TOKEN')
-    sys.exit(1)
-
-print('Token OK')
+import json, urllib.request, datetime, math
 
 # Fetch ticker from Bitget
 try:
@@ -17,7 +10,7 @@ try:
     print(f'Ticker: {price}')
 except Exception as e:
     print(f'TICKER FAIL: {e}')
-    sys.exit(1)
+    exit(1)
 
 # Fetch 1H klines from Bitget
 try:
@@ -26,16 +19,16 @@ try:
     klines = resp['data']
     if len(klines) < 26:
         print(f'Not enough klines: {len(klines)}')
-        sys.exit(1)
-    klines.reverse()  # Bitget返回最新在前，反转为时间正序
+        exit(1)
+    klines.reverse()
     print(f'Klines: {len(klines)}')
 except Exception as e:
     print(f'KLINES FAIL: {e}')
-    sys.exit(1)
+    exit(1)
 
 closes = [float(k[4]) for k in klines]
 
-# RSI (14-period)
+# RSI
 start = max(1, len(closes) - 14)
 gains_v = [max(0, closes[i] - closes[i-1]) for i in range(start, len(closes))]
 losses_v = [abs(min(0, closes[i] - closes[i-1])) for i in range(start, len(closes))]
@@ -72,18 +65,11 @@ trend_down = ema7 < ema25
 cur_h_change = (price - prev_h) / prev_h * 100
 
 # === 新策略：大涨/大跌后横盘震荡 → 反向操作 ===
-# 计算近6小时涨跌幅（大涨/大跌判断）
 h6_change = (price - closes[-7]) / closes[-7] * 100 if len(closes) >= 7 else 0
-
-# 大涨：6小时涨幅 > 1.5%
 is_surge = h6_change > 1.5
-# 大跌：6小时跌幅 > 1.5%
 is_dump = h6_change < -1.5
-# 横盘震荡：当前波动收敛 + RSI回到中性区
-is_oscillating = is_stable and (40 < rsi < 60)
-# 震荡中但还偏高/偏低
-is_osc_high = is_stable and rsi >= 50  # 震荡偏高→做空
-is_osc_low = is_stable and rsi <= 50   # 震荡偏低→做多
+is_osc_high = is_stable and rsi >= 50
+is_osc_low = is_stable and rsi <= 50
 
 signal = 'waiting'
 reasons = []
@@ -95,19 +81,15 @@ if is_stable: reasons.append('波动收敛(震荡中)')
 elif is_big_move: reasons.append('大幅波动(观望)')
 reasons.append(f'6h涨跌{h6_change:+.2f}%')
 
-# 策略1：大涨后横盘震荡 → 高位做空
 if is_surge and is_osc_high and not is_big_move:
     signal = 'short'
-    reasons.insert(0, '🔊大涨后横盘→高位做空')
-# 策略2：大跌后横盘震荡 → 低位做多
+    reasons.insert(0, '大涨后横盘高位做空')
 elif is_dump and is_osc_low and not is_big_move:
     signal = 'long'
-    reasons.insert(0, '🔊大跌后横盘→低位做多')
-# 策略3：大行情中 → 观望
+    reasons.insert(0, '大跌后横盘低位做多')
 elif is_big_move:
     signal = 'waiting'
-    reasons.append('⚠️大行情企稳后再进')
-# 策略4：原有趋势策略（备用）
+    reasons.append('大行情企稳后再进')
 else:
     bull = 0
     if trend_up: bull += 1
@@ -126,17 +108,14 @@ else:
         signal = 'short'
         reasons.insert(0, '做空信号')
 
-print(f'RSI={rsi:.1f} EMA7={ema7:.1f} EMA25={ema25:.1f} Signal={signal}')
+print(f'RSI={rsi:.1f} EMA7={ema7:.1f} EMA25={ema25:.1f} Signal={signal} h6={h6_change:+.2f}%')
 
 change24h = float(tk.get('change24h', 0))
-change24hUSD = change24h * price
-
 change24hP = round(change24h * 100, 2)
-change24hUSD = round(change24hUSD, 2)
+change24hUSD = round(change24h * price, 2)
 high24h = float(tk['high24h'])
 low24h = float(tk['low24h'])
 
-# === 前端格式: ticker / strategy ===
 data = {
     'ticker': {
         'lastPrice': str(price),
@@ -165,37 +144,10 @@ data = {
     'source': 'github-actions'
 }
 
-# Push via GitHub API
-try:
-    content = base64.b64encode(json.dumps(data).encode()).decode()
-    req = urllib.request.Request(
-        'https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=gh-pages',
-        headers={'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json'}
-    )
-    resp = json.load(urllib.request.urlopen(req, timeout=15))
-    sha = resp['sha']
-    body = json.dumps({
-        'message': f'update {price}',
-        'content': content,
-        'sha': sha,
-        'branch': 'gh-pages'
-    }).encode()
-    req2 = urllib.request.Request(
-        'https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json',
-        data=body,
-        headers={
-            'Authorization': 'token ' + token,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-        },
-        method='PUT'
-    )
-    r = json.load(urllib.request.urlopen(req2, timeout=15))
-    if 'content' in r:
-        print(f'SUCCESS - {price}')
-    else:
-        print('PUSH FAIL')
-        sys.exit(1)
-except Exception as e:
-    print(f'PUSH ERROR: {e}')
-    sys.exit(1)
+# 写入本地文件，Workflow用git push
+import os
+out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'data.json')
+with open(out_path, 'w') as fp:
+    json.dump(data, fp, indent=2)
+print(f'Written to {out_path}')
+print(f'Done!')
