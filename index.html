@@ -811,7 +811,7 @@ async function load(){
 try{
   var d = null;
   try{
-    var r = await fetch('http://154.36.185.164:8000/data.json?t=' + Date.now(), {cache:'no-store'});
+    var r = await fetch('data/data.json?t=' + Date.now(), {cache:'no-store'});
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
