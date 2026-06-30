@@ -672,9 +672,19 @@ function calcEMA(data, period){
   return ema;
 }
 
-async function fetchFromOKX(){
+async function fetchFromBinance(){
   try{
-    // Bitget API - 国内可访问+CORS完全兼容
+    var tr = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');
+    var tk = await tr.json();
+    if(!tk.lastPrice) return null;
+    var kr = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=50');
+    var kraw = await kr.json();
+    if(!kraw || kraw.length < 26) return null;
+    return { tk: { lastPr: tk.lastPrice, open: tk.openPrice, change24h: tk.priceChangePercent, high24h: tk.highPrice, low24h: tk.lowPrice }, klines: kraw.map(function(k){ return parseFloat(k[4]); }) };
+  } catch(e){ console.log('Binance fail:', e); return null; }
+}
+async function fetchFromBitget(){
+  try{
     var tr = await fetch('https://api.bitget.com/api/v2/spot/market/tickers?symbol=PAXGUSDT');
     var td = await tr.json();
     if(td.code !== '00000' || !td.data || !td.data[0]) return null;
@@ -682,7 +692,16 @@ async function fetchFromOKX(){
     var kr = await fetch('https://api.bitget.com/api/v2/spot/market/candles?symbol=PAXGUSDT&granularity=1H&limit=50');
     var kd = await kr.json();
     if(kd.code !== '00000' || !kd.data || kd.data.length < 26) return null;
-    var klines = kd.data.reverse();
+    return { tk: tk, klines: kd.data.reverse().map(function(k){ return parseFloat(k[4]); }) };
+  } catch(e){ console.log('Bitget fail:', e); return null; }
+}
+async function fetchFromOKX(){
+  try{
+    // 双源: 先Bitget，失败用Binance
+    var src = await fetchFromBitget() || await fetchFromBinance();
+    if(!src) return null;
+    var tk = src.tk;
+    var klines = src.klines;
     var closes = klines.map(function(k){ return parseFloat(k[4]); });
     var gains = [], losses = [];
     for(var i=1; i<closes.length; i++){
@@ -767,9 +786,9 @@ try{
     console.log('看门狗: 启动Bitget API...');
     d = await fetchFromOKX();
     if(d) { useFrontendData = true; watchdogFailCount = 0; }
-    else { watchdogFailCount++; console.log('看门狗: Bitget失败, 第' + watchdogFailCount + '次'); }
+    else { watchdogFailCount++; console.log('看门狗: API全失败, 第' + watchdogFailCount + '次'); }
   }
-  if(!d) throw new Error('看门狗: data.json过期且Bitget API不可用(' + watchdogFailCount + '次)');
+  if(!d) throw new Error('看门狗: data.json过期且Bitget/Binance均不可用(' + watchdogFailCount + '次)');
   var t = d.ticker;
   var s = d.strategy;
   var p = parseFloat(t.lastPrice);
