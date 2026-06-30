@@ -815,8 +815,13 @@ try{
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
-      if(age < 600) { d = jd; useFrontendData = false; console.log('✅ data.json, age=' + age + 's'); }
-    else { console.log('⚠️ data.json过期 ' + age + 's, 切换Bitget API'); }
+      if(age < 600) {
+        d = jd;
+        useFrontendData = false;
+        console.log('✅ data.json, age=' + age + 's');
+      } else {
+        console.log('⚠️ data.json过期 ' + age + 's, 切换看门狗API');
+      }
     }
   } catch(e){ console.log('data.json失败:', e.message); }
   if(!d){
