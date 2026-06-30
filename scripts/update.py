@@ -149,7 +149,7 @@ data = {
 try:
     content = base64.b64encode(json.dumps(data).encode()).decode()
     req = urllib.request.Request(
-        'https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=main',
+        'https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=gh-pages',
         headers={'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json'}
     )
     resp = json.load(urllib.request.urlopen(req, timeout=15))
@@ -158,7 +158,7 @@ try:
         'message': f'update {price}',
         'content': content,
         'sha': sha,
-        'branch': 'main'
+        'branch': 'gh-pages'
     }).encode()
     req2 = urllib.request.Request(
         'https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json',
