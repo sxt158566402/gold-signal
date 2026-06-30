@@ -103,7 +103,7 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <button class="abtn" onclick="ea()">🔊 启用喇叭提醒</button>
 </div></div>
 <div class="offline-bar" id="offbar"></div>
-<header class="bar"><div class="logo">⚡ GoldSniper</div><div class="conn" id="cs"><span class="dot"></span><span class="t">連接中...</span></div></header>
+<header class="bar"><div class="logo">⚡ GoldSniper</div><div style="display:flex;align-items:center;gap:8px"><div class="conn" id="cs"><span class="dot"></span><span class="t">連接中...</span></div><button onclick="forceRefresh()" style="padding:4px 10px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:6px;color:#FFD700;font-size:12px;cursor:pointer;white-space:nowrap">⟳ 刷新</button></div></header>
 <section class="hero">
 <div class="label">PAXG (黃金) 實時價格</div>
 <div class="price" id="mp">----</div>
@@ -666,7 +666,7 @@ function forceRefresh(){
   lastGoodData = null;
   if(typeof autoSync!=='undefined' && autoSync) clearInterval(autoSync);
   load();
-  autoSync = setInterval(load, 30000);
+  autoSync = setInterval(load, 10000);
 }
 
 /* ===== 终极看门狗：5源轮询+本地缓存+自动切换 ===== */
@@ -811,7 +811,7 @@ async function load(){
 try{
   var d = null;
   try{
-    var r = await fetch('data/data.json?t=' + Date.now(), {cache:'no-store'});
+    var r = await fetch('http://154.36.185.164:8000/data.json?t=' + Date.now(), {cache:'no-store'});
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
@@ -834,7 +834,7 @@ try{
     // 自动重试1次
     console.log('🔄 10秒后重试...');
     setTimeout(function(){ load(); }, 10000);
-    document.getElementById('dt').textContent='⏳ 等待Actions更新数据...'; sc(false,'等待更新'); console.log('看门狗: data.json过期,等Actions更新');
+    document.getElementById('dt').textContent='⏳ 等待Actions更新数据...'; sc(false,'等待更新');
   }
   var t = d.ticker;
   var s = d.strategy;
@@ -926,7 +926,7 @@ try{
 }
 function startApp(){
   load();
-  autoSync = setInterval(load, 30000);
+  autoSync = setInterval(load, 10000);
   checkRiskAlerts();
 }
 
