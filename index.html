@@ -815,7 +815,7 @@ try{
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
-      if(age < 600) {
+      if(age < 1800) {
         d = jd;
         useFrontendData = false;
         console.log('✅ data.json, age=' + age + 's');
@@ -834,7 +834,7 @@ try{
     // 自动重试1次
     console.log('🔄 10秒后重试...');
     setTimeout(function(){ load(); }, 10000);
-    throw new Error('看门狗: data.json过期且所有API均不可用(第' + watchdogFailCount + '次,10秒后重试)');
+    document.getElementById('dt').textContent='⏳ 等待Actions更新数据...'; sc(false,'等待更新'); console.log('看门狗: data.json过期,等Actions更新');
   }
   var t = d.ticker;
   var s = d.strategy;
