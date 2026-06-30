@@ -516,7 +516,7 @@ async function doUserLogin(){
   if(!pw){err.textContent='請輸入密碼';return;}
   err.textContent='驗證中...';
   try{
-    var r=await fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'});
+    var r=await fetch('data/users.json?t='+Date.now(),{cache:'no-store'});
     var users=await r.json();
     var u=users[email];
     if(!u){err.textContent='帳號不存在，請聯繫管理員';return;}
@@ -545,7 +545,7 @@ function checkLogin(){
     // 验证 token 有效性
     var email=currentUser;
     var pw=localStorage.getItem('gs_user_pw')||'';
-    fetch('https://sxt158566402.github.io/gold-signal/data/users.json?t='+Date.now(),{cache:'no-store'})
+    fetch('data/users.json?t='+Date.now(),{cache:'no-store'})
       .then(function(r){return r.json();})
       .then(function(users){
         var u=users[email];
