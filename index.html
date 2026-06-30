@@ -659,9 +659,12 @@ function checkStale(){
 }
 setInterval(checkStale, 10000);
 
-/* ===== 看门狗：data.json过期自动切换Bitget API ===== */
+/* ===== 终极看门狗：5源轮询+本地缓存+自动切换 ===== */
 var useFrontendData = false;
 var watchdogFailCount = 0;
+var lastGoodData = null;
+var apiOrder = ['bitget','binance','kucoin','coingecko'];
+var currentApiIdx = 0;
 
 function calcEMA(data, period){
   var k = 2 / (period + 1);
@@ -672,102 +675,126 @@ function calcEMA(data, period){
   return ema;
 }
 
-async function fetchFromBinance(){
-  try{
-    var tr = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');
-    var tk = await tr.json();
-    if(!tk.lastPrice) return null;
-    var kr = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=50');
-    var kraw = await kr.json();
-    if(!kraw || kraw.length < 26) return null;
-    return { tk: { lastPr: tk.lastPrice, open: tk.openPrice, change24h: tk.priceChangePercent, high24h: tk.highPrice, low24h: tk.lowPrice }, klines: kraw.map(function(k){ return parseFloat(k[4]); }) };
-  } catch(e){ console.log('Binance fail:', e); return null; }
+function computeStrategy(tk, klines){
+  var closes = klines;
+  var gains = [], losses = [];
+  for(var i=1; i<closes.length; i++){
+    var diff = closes[i] - closes[i-1];
+    gains.push(diff > 0 ? diff : 0);
+    losses.push(diff < 0 ? Math.abs(diff) : 0);
+  }
+  var avgGain = gains.slice(-14).reduce(function(a,b){return a+b},0)/14;
+  var avgLoss = losses.slice(-14).reduce(function(a,b){return a+b},0)/14;
+  var rs = avgLoss === 0 ? 100 : avgGain/avgLoss;
+  var rsi = 100 - (100/(1+rs));
+  var ema7 = calcEMA(closes, 7);
+  var ema25 = calcEMA(closes, 25);
+  var bbData = closes.slice(-20);
+  var bbMean = bbData.reduce(function(a,b){return a+b},0)/20;
+  var bbStd = Math.sqrt(bbData.map(function(x){return Math.pow(x-bbMean,2)}).reduce(function(a,b){return a+b},0)/20);
+  var price = parseFloat(tk.lastPr);
+  var priceChange24 = parseFloat(tk.open) > 0 ? (price - parseFloat(tk.open)) : 0;
+  var priceChangePct24 = parseFloat(tk.change24h) * 100;
+  var curH = price;
+  var prevH = closes[closes.length-2];
+  var prev2H = closes.length > 2 ? closes[closes.length-3] : prevH;
+  var priceChangeCurH = (curH - prevH) / prevH * 100;
+  var volatility = Math.abs(curH - prevH) / prevH * 100;
+  var volatilityPrev = Math.abs(prevH - prev2H) / prev2H * 100;
+  var isStable = volatility < 0.12 && volatilityPrev < 0.15;
+  var isBigMove = volatility > 0.3;
+  var trendUp = ema7 > ema25;
+  var trendDown = ema7 < ema25;
+  var signal = 'waiting';
+  var reasons = [];
+  if(rsi < 30) reasons.push('RSI超卖(' + rsi.toFixed(1) + ')');
+  else if(rsi > 70) reasons.push('RSI超买(' + rsi.toFixed(1) + ')');
+  if(trendUp) reasons.push('EMA金叉(趋势看多)'); else reasons.push('EMA死叉(趋势看空)');
+  if(priceChangeCurH < -0.1) reasons.push('本小时跌' + priceChangeCurH.toFixed(2) + '%');
+  else if(priceChangeCurH > 0.1) reasons.push('本小时涨' + priceChangeCurH.toFixed(2) + '%');
+  if(price < bbMean-2*bbStd) reasons.push('价格低于布林下轨');
+  else if(price > bbMean+2*bbStd) reasons.push('价格突破布林上轨');
+  if(isStable) reasons.push('波动收敛(企稳)');
+  else if(isBigMove) reasons.push('大幅波动(观望)');
+  var bullScore = 0;
+  if(trendUp) bullScore++;
+  if(rsi < 40 && rsi > 25) bullScore++;
+  if(price > ema25) bullScore++;
+  if(price > bbMean) bullScore++;
+  if(priceChangeCurH > 0 && priceChangeCurH < 0.2) bullScore++;
+  var bearScore = 0;
+  if(trendDown) bearScore++;
+  if(rsi < 75 && rsi > 60) bearScore++;
+  if(price < ema25) bearScore++;
+  if(price < bbMean) bearScore++;
+  if(priceChangeCurH < 0 && priceChangeCurH > -0.2) bearScore++;
+  if(bullScore >= 3 && !isBigMove) signal = 'long';
+  else if(bearScore >= 3 && !isBigMove) signal = 'short';
+  if(isBigMove && signal !== 'waiting') { signal = 'waiting'; reasons.push('⚠️大行情企稳后再进'); }
+  return {
+    ticker: { lastPrice: tk.lastPr, priceChange: priceChange24.toString(), priceChangePercent: priceChangePct24.toFixed(2), highPrice: parseFloat(tk.high24h), lowPrice: parseFloat(tk.low24h) },
+    strategy: { signal: signal, price: price, reason: reasons.join(' | '), indicators: { rsi: rsi, ema7: ema7, ema25: ema25, bbUpper: bbMean+2*bbStd, bbMiddle: bbMean, bbLower: bbMean-2*bbStd, volatility: volatility.toFixed(3), stable: isStable } },
+    timestamp: Date.now(),
+    source: 'frontend-api'
+  };
 }
-async function fetchFromBitget(){
-  try{
-    var tr = await fetch('https://api.bitget.com/api/v2/spot/market/tickers?symbol=PAXGUSDT');
-    var td = await tr.json();
-    if(td.code !== '00000' || !td.data || !td.data[0]) return null;
-    var tk = td.data[0];
-    var kr = await fetch('https://api.bitget.com/api/v2/spot/market/candles?symbol=PAXGUSDT&granularity=1H&limit=50');
-    var kd = await kr.json();
-    if(kd.code !== '00000' || !kd.data || kd.data.length < 26) return null;
-    return { tk: tk, klines: kd.data.reverse().map(function(k){ return parseFloat(k[4]); }) };
-  } catch(e){ console.log('Bitget fail:', e); return null; }
+
+async function fetchBitget(){
+  var tr = await fetch('https://api.bitget.com/api/v2/spot/market/tickers?symbol=PAXGUSDT');
+  var td = await tr.json();
+  if(td.code !== '00000' || !td.data || !td.data[0]) throw new Error('bitget ticker');
+  var tk = td.data[0];
+  var kr = await fetch('https://api.bitget.com/api/v2/spot/market/candles?symbol=PAXGUSDT&granularity=1H&limit=50');
+  var kd = await kr.json();
+  if(kd.code !== '00000' || !kd.data || kd.data.length < 26) throw new Error('bitget klines');
+  return computeStrategy(tk, kd.data.reverse().map(function(k){ return parseFloat(k[4]); }));
 }
+async function fetchBinance(){
+  var tr = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT');
+  var tk = await tr.json();
+  if(!tk.lastPrice) throw new Error('binance ticker');
+  var kr = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=50');
+  var kraw = await kr.json();
+  if(!kraw || kraw.length < 26) throw new Error('binance klines');
+  var tk2 = { lastPr: tk.lastPrice, open: tk.openPrice, change24h: tk.priceChangePercent, high24h: tk.highPrice, low24h: tk.lowPrice };
+  return computeStrategy(tk2, kraw.map(function(k){ return parseFloat(k[4]); }));
+}
+async function fetchKucoin(){
+  var tr = await fetch('https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=PAXG-USDT');
+  var td = await tr.json();
+  if(!td.data || !td.data.price) throw new Error('kucoin ticker');
+  var tk2 = { lastPr: td.data.price, open: td.data.price, change24h: '0', high24h: td.data.price, low24h: td.data.price };
+  return computeStrategy(tk2, [tk2.lastPr]);
+}
+async function fetchCoingecko(){
+  var tr = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd&include_24hr_change=true');
+  var td = await tr.json();
+  if(!td['pax-gold']) throw new Error('coingecko');
+  var tk2 = { lastPr: td['pax-gold'].usd, open: td['pax-gold'].usd, change24h: (td['pax-gold'].usd_24h_change||0).toString(), high24h: td['pax-gold'].usd, low24h: td['pax-gold'].usd };
+  return computeStrategy(tk2, [tk2.lastPr]);
+}
+
+var fetchFns = { bitget: fetchBitget, binance: fetchBinance, kucoin: fetchKucoin, coingecko: fetchCoingecko };
+
 async function fetchFromOKX(){
   try{
-    // 双源: 先Bitget，失败用Binance
-    var src = await fetchFromBitget() || await fetchFromBinance();
-    if(!src) return null;
-    var tk = src.tk;
-    var klines = src.klines;
-    var closes = klines.map(function(k){ return parseFloat(k[4]); });
-    var gains = [], losses = [];
-    for(var i=1; i<closes.length; i++){
-      var diff = closes[i] - closes[i-1];
-      gains.push(diff > 0 ? diff : 0);
-      losses.push(diff < 0 ? Math.abs(diff) : 0);
+    for(var i=0; i<apiOrder.length; i++){
+      var idx = (currentApiIdx + i) % apiOrder.length;
+      var name = apiOrder[idx];
+      try{
+        console.log('🐕 尝试 ' + name);
+        var d = await fetchFns[name]();
+        currentApiIdx = (idx + 1) % apiOrder.length;
+        console.log('✅ ' + name + ' 成功');
+        return d;
+      } catch(e){ console.log('❌ ' + name + ': ' + e.message); }
     }
-    var avgGain = gains.slice(-14).reduce(function(a,b){return a+b},0)/14;
-    var avgLoss = losses.slice(-14).reduce(function(a,b){return a+b},0)/14;
-    var rs = avgLoss === 0 ? 100 : avgGain/avgLoss;
-    var rsi = 100 - (100/(1+rs));
-    var ema7 = calcEMA(closes, 7);
-    var ema25 = calcEMA(closes, 25);
-    var bbData = closes.slice(-20);
-    var bbMean = bbData.reduce(function(a,b){return a+b},0)/20;
-    var bbStd = Math.sqrt(bbData.map(function(x){return Math.pow(x-bbMean,2)}).reduce(function(a,b){return a+b},0)/20);
-    var price = parseFloat(tk.lastPr);
-    var priceChange24 = parseFloat(tk.open) > 0 ? (price - parseFloat(tk.open)) : 0;
-    var priceChangePct24 = parseFloat(tk.change24h) * 100;
-    var curH = price;
-    var prevH = closes[closes.length-2];
-    var prev2H = closes.length > 2 ? closes[closes.length-3] : prevH;
-    var priceChangeCurH = (curH - prevH) / prevH * 100;
-    // 企稳判断：最近2根K线波动幅度 < 0.15% = 企稳中
-    var volatility = Math.abs(curH - prevH) / prevH * 100;
-    var volatilityPrev = Math.abs(prevH - prev2H) / prev2H * 100;
-    var isStable = volatility < 0.12 && volatilityPrev < 0.15;
-    // 大涨大跌判断：单根K线波动 > 0.3% = 大行情
-    var isBigMove = volatility > 0.3;
-    // 趋势方向（EMA7 vs EMA25）
-    var trendUp = ema7 > ema25;
-    var trendDown = ema7 < ema25;
-    var signal = 'waiting';
-    var reasons = [];
-    if(rsi < 30) reasons.push('RSI超卖(' + rsi.toFixed(1) + ')');
-    else if(rsi > 70) reasons.push('RSI超买(' + rsi.toFixed(1) + ')');
-    if(trendUp) reasons.push('EMA金叉(趋势看多)'); else reasons.push('EMA死叉(趋势看空)');
-    if(priceChangeCurH < -0.1) reasons.push('本小时跌' + priceChangeCurH.toFixed(2) + '%');
-    else if(priceChangeCurH > 0.1) reasons.push('本小时涨' + priceChangeCurH.toFixed(2) + '%');
-    if(price < bbMean-2*bbStd) reasons.push('价格低于布林下轨');
-    else if(price > bbMean+2*bbStd) reasons.push('价格突破布林上轨');
-    if(isStable) reasons.push('波动收敛(企稳)');
-    else if(isBigMove) reasons.push('大幅波动(观望)');
-    var bullScore = 0;
-    if(trendUp) bullScore++;           // 趋势必须看多
-    if(rsi < 40 && rsi > 25) bullScore++;  // RSI回调区（非超跌）
-    if(price > ema25) bullScore++;     // 价格在EMA25上方
-    if(price > bbMean) bullScore++;    // 价格在布林中轨上方
-    if(priceChangeCurH > 0 && priceChangeCurH < 0.2) bullScore++; // 小幅上涨（企稳反弹）
-    var bearScore = 0;
-    if(trendDown) bearScore++;          // 趋势必须看空
-    if(rsi < 75 && rsi > 60) bearScore++; // RSI回落区（非超涨）
-    if(price < ema25) bearScore++;     // 价格在EMA25下方
-    if(price < bbMean) bearScore++;    // 价格在布林中轨下方
-    if(priceChangeCurH < 0 && priceChangeCurH > -0.2) bearScore++; // 小幅下跌（企稳回落）
-    // 必须同时满足：趋势一致 + 企稳 + 不在大行情中
-    if(bullScore >= 3 && !isBigMove) signal = 'long';
-    else if(bearScore >= 3 && !isBigMove) signal = 'short';
-    if(isBigMove && signal !== 'waiting') { signal = 'waiting'; reasons.push('⚠️大行情企稳后再进'); }
-    return {
-      ticker: { lastPrice: tk.lastPr, priceChange: priceChange24.toString(), priceChangePercent: priceChangePct24.toFixed(2), highPrice: parseFloat(tk.high24h), lowPrice: parseFloat(tk.low24h) },
-      strategy: { signal: signal, price: price, reason: reasons.join(' | '), indicators: { rsi: rsi, ema7: ema7, ema25: ema25, bbUpper: bbMean+2*bbStd, bbMiddle: bbMean, bbLower: bbMean-2*bbStd, volatility: volatility.toFixed(3), stable: isStable } },
-      timestamp: Date.now(),
-      source: 'frontend-okx'
-    };
-  } catch(e){ console.error('OKX fail:', e); document.getElementById('dt').textContent = '❌ API失败: ' + e.message; return null; }
+    if(lastGoodData && (Date.now() - lastGoodData.timestamp) < 3600000){
+      console.log('⚠️ 全部失败，使用缓存');
+      return lastGoodData;
+    }
+    return null;
+  } catch(e){ console.error('fetchFromOKX error:', e); return null; }
 }
 
 async function load(){
@@ -785,10 +812,10 @@ try{
   if(!d){
     console.log('看门狗: 启动Bitget API...');
     d = await fetchFromOKX();
-    if(d) { useFrontendData = true; watchdogFailCount = 0; }
-    else { watchdogFailCount++; console.log('看门狗: API全失败, 第' + watchdogFailCount + '次'); }
+    if(d) { useFrontendData = true; watchdogFailCount = 0; lastGoodData = d; }
+    else { watchdogFailCount++; console.log('看门狗: 全部失败, 第' + watchdogFailCount + '次'); }
   }
-  if(!d) throw new Error('看门狗: data.json过期且Bitget/Binance均不可用(' + watchdogFailCount + '次)');
+  if(!d) throw new Error('看门狗: data.json过期且所有API均不可用(' + watchdogFailCount + '次)');
   var t = d.ticker;
   var s = d.strategy;
   var p = parseFloat(t.lastPrice);
