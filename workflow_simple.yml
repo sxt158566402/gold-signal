@@ -1,0 +1,56 @@
+name: Update Data
+on:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Try Binance first
+          if curl -sf --max-time 10 "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/t.json; then
+            echo "Binance data fetched"
+          elif curl -sf --max-time 10 "https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd" > /tmp/cg.json; then
+            echo "CoinGecko data fetched"
+          else
+            echo "All APIs blocked, skipping"
+            exit 0
+          fi
+
+      - name: Update data.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create simple data file
+          if [ -f /tmp/t.json ]; then
+            # Binance data
+            python3 -c "
+          import json, datetime, base64, urllib.request, os
+          token = os.environ['GH_TOKEN']
+          t = json.load(open('/tmp/t.json'))
+          p = float(t['lastPrice'])
+          data = {'ticker': t, 'strategy': {'signal': 'waiting', 'price': p, 'reason': '監控中', 'indicators': {'rsi': 50, 'ema7': p, 'ema25': p, 'bbUpper': p, 'bbMiddle': p, 'bbLower': p}}, 'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)}
+          req = urllib.request.Request('https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=gh-pages', headers={'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'})
+          try:
+              sha = json.load(urllib.request.urlopen(req))['sha']
+          except:
+              sha = None
+          content = base64.b64encode(json.dumps(data, indent=2).encode()).decode()
+          body = {'message': f'update {datetime.datetime.now(datetime.timezone.utc).strftime(\"%H:%M:%S\")}', 'content': content, 'branch': 'gh-pages'}
+          if sha: body['sha'] = sha
+          req2 = urllib.request.Request('https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json', data=json.dumps(body).encode(), headers={'Authorization': f'token {token}', 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json'}, method='PUT')
+          r = json.load(urllib.request.urlopen(req2))
+          if 'content' in r:
+              print(f'PUSHED: ${p} sig=waiting')
+          else:
+              print(f'ERROR: {r.get(\"message\",\"?\")}')
+          "
+          fi

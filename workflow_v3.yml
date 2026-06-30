@@ -1,0 +1,69 @@
+name: Update Data
+on:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch data
+        run: |
+          # Try Binance first
+          if curl -sf --max-time 10 "https://api1.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT" > /tmp/t.json; then
+            echo "SOURCE=binance" >> $GITHUB_ENV
+          elif curl -sf --max-time 10 "https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd" > /tmp/cg.json; then
+            echo "SOURCE=coingecko" >> $GITHUB_ENV
+          else
+            echo "All APIs blocked, skipping"
+            exit 0
+          fi
+
+      - name: Process data
+        run: |
+          python3 << 'PYEOF'
+          import json, datetime, base64, urllib.request, os
+          
+          token = os.environ['GH_TOKEN']
+          source = os.environ.get('SOURCE', 'binance')
+          
+          if source == "binance":
+              t = json.load(open("/tmp/t.json"))
+              p = float(t["lastPrice"])
+              sig, why = "waiting", "監控中"
+              data = {"ticker": t, "strategy": {"signal": sig, "price": p, "reason": why, "indicators": {"rsi": 50, "ema7": p, "ema25": p, "bbUpper": p, "bbMiddle": p, "bbLower": p}}, "timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)}
+          else:
+              cg = json.load(open("/tmp/cg.json"))
+              p = cg["pax-gold"]["usd"]
+              sig = "waiting"
+              data = {"ticker": {"lastPrice": str(p), "priceChange": "0", "priceChangePercent": "0", "highPrice": str(p), "lowPrice": str(p)}, "strategy": {"signal": sig, "price": p, "reason": "CoinGecko", "indicators": {"rsi": 50, "ema7": p, "ema25": p, "bbUpper": p, "bbMiddle": p, "bbLower": p}}, "timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)}
+          
+          # Get current SHA
+          req = urllib.request.Request("https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json?ref=gh-pages", headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"})
+          try:
+              sha = json.load(urllib.request.urlopen(req))["sha"]
+          except:
+              sha = None
+          
+          content = base64.b64encode(json.dumps(data, indent=2).encode()).decode()
+          body = {"message": f"update {datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')}", "content": content, "branch": "gh-pages"}
+          if sha: body["sha"] = sha
+          
+          req2 = urllib.request.Request("https://api.github.com/repos/sxt158566402/gold-signal/contents/data/data.json", data=json.dumps(body).encode(), headers={"Authorization": f"token {token}", "Content-Type": "application/json", "Accept": "application/vnd.github.v3+json"}, method="PUT")
+          r = json.load(urllib.request.urlopen(req2))
+          if "content" in r:
+              print(f"PUSHED: ${p} sig={sig}")
+          else:
+              print(f"ERROR: {r.get('message','?')}")
+          PYEOF
+
+      - name: Push data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # This step is handled in the Python script above
+          echo "Data update completed"

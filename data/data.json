@@ -1,39 +1,54 @@
 {
   "ticker": {
-    "symbol": "PAXGUSDT",
-    "priceChange": "-96.31000000",
-    "priceChangePercent": "-2.374",
-    "weightedAvgPrice": "3992.25298917",
-    "prevClosePrice": "4057.87000000",
-    "lastPrice": "3960.23000000",
-    "lastQty": "0.35970000",
-    "bidPrice": "3960.23000000",
-    "bidQty": "1.28050000",
-    "askPrice": "3960.24000000",
-    "askQty": "0.67640000",
-    "openPrice": "4056.54000000",
-    "highPrice": "4072.00000000",
-    "lowPrice": "3944.57000000",
-    "volume": "4430.77480000",
-    "quoteVolume": "17688773.93962700",
-    "openTime": 1782701119852,
-    "closeTime": 1782787519852,
-    "firstId": 48669494,
-    "lastId": 48708457,
-    "count": 38964
+    "lastPrice": "4033.8",
+    "priceChange": "8.47",
+    "priceChangePercent": "0.21",
+    "highPrice": 4061.01,
+    "lowPrice": 3945.06,
+    "volume": "358.13"
   },
   "strategy": {
     "signal": "waiting",
-    "price": 3960.23,
-    "reason": "\u76e3\u63a7\u4e2d",
+    "price": 4033.8,
+    "reason": "\u4e0b\u8dcc\u8d8b\u52bf(\u5f3a\u5ea61152%) | 24h:-11.0% | RSI(4h):19 RSI(1h):37 | ATR:38 | \u975e\u6a2a\u76d8(0/4) | \u23f3\u6025\u8dcc\u8d85\u5356(RSI<30),\u7b49\u5f85\u53cd\u5f39\u56de\u8e29EMA25(4499)",
     "indicators": {
-      "rsi": 11.72,
-      "ema7": 3996.44,
-      "ema25": 4026.09,
-      "bbUpper": 4064.47,
-      "bbMiddle": 4018.23,
-      "bbLower": 3971.99
+      "rsi": 37.0,
+      "ema7": 4071.6,
+      "ema25": 4075.72,
+      "bbUpper": 4091.07,
+      "bbMiddle": 4077.1,
+      "bbLower": 4063.13,
+      "volatility": 24.67,
+      "stable": false
+    },
+    "h4": {
+      "rsi": 19.1,
+      "ema7": 4474.07,
+      "ema25": 4498.56,
+      "ema50": 4469.16,
+      "atr": 37.81,
+      "h24_change": -11.01,
+      "trend": "\u4e0b\u8dcc",
+      "trend_strength": 1151.52,
+      "oscillating": false,
+      "osc_score": 0,
+      "pullback": false,
+      "pullback_distance": -12.29,
+      "far_from_ema25": true,
+      "oversold": true,
+      "overbought": false,
+      "stopLoss": 0,
+      "takeProfit": 0,
+      "position_size": 0,
+      "position_pct": 0
+    },
+    "backtest": {
+      "total": 67,
+      "wins": 39,
+      "win_rate": 58.2,
+      "note": "67\u7b14\u4ea4\u6613,39\u80dc28\u8d1f,\u80dc\u738758.2%"
     }
   },
-  "timestamp": 1782787521929
+  "timestamp": 1782834705992,
+  "source": "vps-rainyun-v4"
 }

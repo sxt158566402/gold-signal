@@ -116,9 +116,9 @@ body{font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8f0;min-h
 <div class="time" id="dt"></div>
 </section>
 <section class="sig">
-<div class="wait" id="sw"><div class="pu" style="font-size:48px;margin-bottom:12px">⏳</div><p style="font-size:16px;font-weight:700">等待信號中...</p><p style="font-size:13px;color:#555;margin-top:6px">系統監控中，大漲大跌後企穩會自動提示</p></div>
-<div class="card long hid" id="ls"><div class="hd"><span class="badge long">📈 做多</span><span id="lt"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="le">--</span></div><div class="row"><span class="l">止損 (-10)</span><span class="v sl" id="lsl">--</span></div><div class="row"><span class="l">止盈 (+10)</span><span class="v tp" id="ltp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="lr"></div></div>
-<div class="card short hid" id="ss"><div class="hd"><span class="badge short">📉 做空</span><span id="st"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="se">--</span></div><div class="row"><span class="l">止損 (+10)</span><span class="v sl" id="ssl">--</span></div><div class="row"><span class="l">止盈 (-10)</span><span class="v tp" id="stp">--</span></div><div class="row"><span class="l">推動止盈</span><span class="v tp">盈利達標後自動上移</span></div><div class="reason" id="sr"></div></div>
+<div class="wait" id="sw"><div class="pu" style="font-size:48px;margin-bottom:12px">⏳</div><p style="font-size:16px;font-weight:700" id="swTitle">等待信號中...</p><p style="font-size:13px;color:#555;margin-top:6px" id="swSub">系統監控中，回踩橫盤後自動提示</p><div id="swDetail" style="margin-top:14px;padding:12px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:#aaa;line-height:1.8;text-align:left;max-width:360px;margin-left:auto;margin-right:auto"></div><div id="swBacktest" style="margin-top:8px;font-size:11px;color:#666;text-align:center"></div></div>
+<div class="card long hid" id="ls"><div class="hd"><span class="badge long">📈 做多</span><span id="lt"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="le">--</span></div><div class="row"><span class="l">止損</span><span class="v sl" id="lsl">--</span></div><div class="row"><span class="l">止盈</span><span class="v tp" id="ltp">--</span></div><div class="row"><span class="l">建議倉位</span><span class="v" id="lpos">--</span></div><div class="reason" id="lr"></div></div>
+<div class="card short hid" id="ss"><div class="hd"><span class="badge short">📉 做空</span><span id="st"></span></div><div class="row m"><span class="l">進場價位</span><span class="v" id="se">--</span></div><div class="row"><span class="l">止損</span><span class="v sl" id="ssl">--</span></div><div class="row"><span class="l">止盈</span><span class="v tp" id="stp">--</span></div><div class="row"><span class="l">建議倉位</span><span class="v" id="spos">--</span></div><div class="reason" id="sr"></div></div>
 </section>
 <!-- 今日运势区域 -->
 <div id="fortuneSection" style="margin:0 16px 16px;padding:14px;background:linear-gradient(135deg,rgba(138,43,226,.15),rgba(138,43,226,.05));border:1px solid rgba(138,43,226,.3);border-radius:10px;">
@@ -878,41 +878,70 @@ try{
     document.getElementById('iL').textContent = '$' + f(i.bbLower);
   }
   
+  // 4H级别趋势+回踩信息显示
+  var h4 = s.h4 || {};
+  var swDetail = document.getElementById('swDetail');
+  var swBacktest = document.getElementById('swBacktest');
+  if(h4.trend){
+    var trendColor = h4.trend==='下跌' ? '#ff4757' : h4.trend==='上漲' ? '#2ed573' : '#888';
+    var trendEmoji = h4.trend==='下跌' ? '📉' : h4.trend==='上漲' ? '📈' : '➡️';
+    var html = '<div style="color:' + trendColor + ';font-weight:700;font-size:14px;margin-bottom:6px">' + trendEmoji + ' ' + h4.trend + '趨勢 (強度' + (h4.trend_strength||0).toFixed(0) + '%)</div>';
+    html += '<div>RSI(4h): <b>' + f(h4.rsi,1) + '</b>' + (h4.oversold?' <span style="color:#2ed573">超賣</span>':h4.overbought?' <span style="color:#ff4757">超買</span>':'') + '</div>';
+    html += '<div>EMA25(4h): <b>$' + f(h4.ema25) + '</b></div>';
+    html += '<div>距EMA25: <b style="color:' + (Math.abs(h4.pullback_distance||0)<1.5?'#2ed573':'#ffa502') + '">' + (h4.pullback_distance||0).toFixed(1) + ' ATR</b>' + (h4.pullback?' ✅回踩到位':' ⏳等待回踩') + '</div>';
+    html += '<div>24h波幅: <b>' + (h4.h24_change||0).toFixed(1) + '%</b></div>';
+    html += '<div>橫盤: <b>' + (h4.oscillating?'✅確認('+h4.osc_score+'/4)':'❌未確認('+h4.osc_score+'/4)') + '</b></div>';
+    swDetail.innerHTML = html;
+  }
+  // 回测数据
+  var bt = s.backtest;
+  if(bt && bt.total > 0){
+    swBacktest.innerHTML = '📊 回測: ' + bt.note + ' | 盈虧比1:1.5';
+  } else if(bt){
+    swBacktest.innerHTML = '📊 回測: ' + (bt.note || '暫無數據');
+  }
+  
   if(s.signal === 'long'){
     document.getElementById('ls').classList.remove('hid');
     document.getElementById('le').textContent = '$' + f(s.price);
-    document.getElementById('lsl').textContent = '$' + f(s.price - 10);
-    document.getElementById('ltp').textContent = '$' + f(s.price + 10);
+    var lSL = h4.stopLoss || (s.price - 10);
+    var lTP = h4.takeProfit || (s.price + 10);
+    document.getElementById('lsl').textContent = '$' + f(lSL);
+    document.getElementById('ltp').textContent = '$' + f(lTP);
+    document.getElementById('lpos').textContent = (h4.position_size||0).toFixed(2) + '手 (' + (h4.position_pct||0).toFixed(1) + '%)';
     document.getElementById('lt').textContent = ft(d.timestamp);
     document.getElementById('lr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'long') {
       if(!isRiskDay){
         horn();
-        var msg = s.reason.indexOf('大跌后横盘') >= 0
-          ? '注意！大跌后开始横盘震荡，低位做多信号！进场价' + f(s.price) + '，止损10美元！'
-          : '做多信号！进场价' + f(s.price) + '，记得止损！';
+        var msg = s.reason.indexOf('回踩橫盤') >= 0
+          ? '注意！上漲趨勢回踩橫盤，做多信號！進場價' + f(s.price) + '，止損' + f(lSL) + '，止盈' + f(lTP) + '！'
+          : '做多信號！進場價' + f(s.price) + '，止損' + f(lSL) + '，記得止損！';
         sp(msg);
       }
       lastSignal = 'long';
-      recordSignal('long', s.price, s.price - 10, s.price + 10);
+      recordSignal('long', s.price, lSL, lTP);
     }
   } else if(s.signal === 'short'){
     document.getElementById('ss').classList.remove('hid');
     document.getElementById('se').textContent = '$' + f(s.price);
-    document.getElementById('ssl').textContent = '$' + f(s.price + 10);
-    document.getElementById('stp').textContent = '$' + f(s.price - 10);
+    var sSL = h4.stopLoss || (s.price + 10);
+    var sTP = h4.takeProfit || (s.price - 10);
+    document.getElementById('ssl').textContent = '$' + f(sSL);
+    document.getElementById('stp').textContent = '$' + f(sTP);
+    document.getElementById('spos').textContent = (h4.position_size||0).toFixed(2) + '手 (' + (h4.position_pct||0).toFixed(1) + '%)';
     document.getElementById('st').textContent = ft(d.timestamp);
     document.getElementById('sr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'short') {
       if(!isRiskDay){
         horn();
-        var msg = s.reason.indexOf('大涨后横盘') >= 0
-          ? '注意！大涨后开始横盘震荡，高位做空信号！进场价' + f(s.price) + '，止损10美元！'
-          : '做空信号！进场价' + f(s.price) + '，记得止损！';
+        var msg = s.reason.indexOf('回踩橫盤') >= 0
+          ? '注意！下跌趨勢回踩橫盤，做空信號！進場價' + f(s.price) + '，止損' + f(sSL) + '，止盈' + f(sTP) + '！'
+          : '做空信號！進場價' + f(s.price) + '，止損' + f(sSL) + '，記得止損！';
         sp(msg);
       }
       lastSignal = 'short';
-      recordSignal('short', s.price, s.price + 10, s.price - 10);
+      recordSignal('short', s.price, sSL, sTP);
     }
   } else {
     document.getElementById('sw').classList.remove('hid');
