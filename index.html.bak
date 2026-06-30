@@ -659,16 +659,6 @@ function checkStale(){
 }
 setInterval(checkStale, 10000);
 
-function forceRefresh(){
-  watchdogFailCount = 0;
-  currentApiIdx = 0;
-  lastGoodData = null;
-  console.log('🔄 强制刷新');
-  load();
-  if(typeof autoSync!=='undefined') clearInterval(autoSync);
-  autoSync = setInterval(load, 30000);
-}
-
 /* ===== 终极看门狗：5源轮询+本地缓存+自动切换 ===== */
 var useFrontendData = false;
 var watchdogFailCount = 0;
@@ -815,7 +805,7 @@ try{
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
-      if(age < 600) { d = jd; useFrontendData = false; console.log('✅ data.json, age=' + age + 's'); }
+      if(age < 300) { d = jd; useFrontendData = false; console.log('✅ data.json, age=' + age + 's'); }
     else { console.log('⚠️ data.json过期 ' + age + 's, 切换Bitget API'); }
     }
   } catch(e){ console.log('data.json失败:', e.message); }
@@ -825,12 +815,7 @@ try{
     if(d) { useFrontendData = true; watchdogFailCount = 0; lastGoodData = d; }
     else { watchdogFailCount++; console.log('看门狗: 全部失败, 第' + watchdogFailCount + '次'); }
   }
-  if(!d) {
-    // 自动重试1次
-    console.log('🔄 10秒后重试...');
-    setTimeout(function(){ load(); }, 10000);
-    throw new Error('看门狗: data.json过期且所有API均不可用(第' + watchdogFailCount + '次,10秒后重试)');
-  }
+  if(!d) throw new Error('看门狗: data.json过期且所有API均不可用(' + watchdogFailCount + '次)');
   var t = d.ticker;
   var s = d.strategy;
   var p = parseFloat(t.lastPrice);

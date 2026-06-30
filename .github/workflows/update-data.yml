@@ -1,9 +1,10 @@
 name: Update Gold Data
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/2 * * * *'
   workflow_dispatch:
-
+permissions:
+  contents: write
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -11,16 +12,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
-
-      - name: Fetch data
-        run: python3 scripts/update.py
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Commit and push
-        run: |
-          git config user.email "sxt158566402@qq.com"
-          git config user.name "sxt158"
-          git add data/data.json
-          git diff --cached --quiet || git commit -m "update $(cat data/data.json | python3 -c 'import sys,json;print(json.load(sys.stdin)["ticker"]["lastPrice"])')"
-          git push
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - run: python scripts/update-data.py
+      - run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "auto: $(date -u '+%H:%M:%S')"
+          git push origin gh-pages
