@@ -13,8 +13,14 @@
   },
   "17763690837@163.com": {
     "password": "gszkn5da",
-    "expiry": 1785251350603,
+    "expiry": 1785415187933,
     "created": 1782642437172,
     "note": "客户"
+  },
+  "1228697812@qq.com": {
+    "password": "gsiek7tz",
+    "expiry": 0,
+    "created": 1782823218160,
+    "note": "晓晓ARK客户"
   }
 }
