@@ -111,32 +111,36 @@ print(f'RSI={rsi:.1f} EMA7={ema7:.1f} EMA25={ema25:.1f} Signal={signal}')
 change24h = float(tk.get('change24h', 0))
 change24hUSD = change24h * price
 
-# === 前端兼容格式: okx / okx_trend / kline_1h ===
+change24hP = round(change24h * 100, 2)
+change24hUSD = round(change24hUSD, 2)
+high24h = float(tk['high24h'])
+low24h = float(tk['low24h'])
+
+# === 前端格式: ticker / strategy ===
 data = {
-    'okx': {
-        'last': price,
-        'change24h': round(change24hUSD, 2),
-        'change24hP': round(change24h * 100, 2),
-        'high24h': float(tk['high24h']),
-        'low24h': float(tk['low24h']),
-        'vol24h': round(float(tk.get('baseVolume', 0)), 2),
-        'ts': int(time.time() * 1000)
+    'ticker': {
+        'lastPrice': str(price),
+        'priceChange': str(change24hUSD),
+        'priceChangePercent': str(change24hP),
+        'highPrice': high24h,
+        'lowPrice': low24h,
+        'volume': str(round(float(tk.get('baseVolume', 0)), 2))
     },
-    'okx_trend': {
+    'strategy': {
         'signal': signal,
         'price': price,
         'reason': ' | '.join(reasons),
-        'rsi': round(rsi, 1),
-        'atr': round(volatility, 4),
-        'volatility': round(volatility, 3),
-        'ema7': round(ema7, 2),
-        'ema25': round(ema25, 2),
-        'bbUpper': round(bb_mean + 2 * bb_std, 2),
-        'bbMiddle': round(bb_mean, 2),
-        'bbLower': round(bb_mean - 2 * bb_std, 2),
-        'stable': is_stable
+        'indicators': {
+            'rsi': round(rsi, 1),
+            'ema7': round(ema7, 2),
+            'ema25': round(ema25, 2),
+            'bbUpper': round(bb_mean + 2 * bb_std, 2),
+            'bbMiddle': round(bb_mean, 2),
+            'bbLower': round(bb_mean - 2 * bb_std, 2),
+            'volatility': round(volatility, 3),
+            'stable': is_stable
+        }
     },
-    'kline_1h': klines,
     'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000),
     'source': 'github-actions'
 }
