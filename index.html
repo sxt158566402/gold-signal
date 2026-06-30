@@ -887,10 +887,13 @@ try{
     document.getElementById('lr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'long') {
       if(!isRiskDay){
-        horn(); sp('做多信号！进场价' + f(s.price) + '，记得止损！');
+        horn();
+        var msg = s.reason.indexOf('大跌后横盘') >= 0
+          ? '注意！大跌后开始横盘震荡，低位做多信号！进场价' + f(s.price) + '，止损10美元！'
+          : '做多信号！进场价' + f(s.price) + '，记得止损！';
+        sp(msg);
       }
       lastSignal = 'long';
-      // 记录信号
       recordSignal('long', s.price, s.price - 10, s.price + 10);
     }
   } else if(s.signal === 'short'){
@@ -902,10 +905,13 @@ try{
     document.getElementById('sr').textContent = '📋 ' + s.reason;
     if(lastSignal !== 'short') {
       if(!isRiskDay){
-        horn(); sp('做空信号！进场价' + f(s.price) + '，记得止损！');
+        horn();
+        var msg = s.reason.indexOf('大涨后横盘') >= 0
+          ? '注意！大涨后开始横盘震荡，高位做空信号！进场价' + f(s.price) + '，止损10美元！'
+          : '做空信号！进场价' + f(s.price) + '，记得止损！';
+        sp(msg);
       }
       lastSignal = 'short';
-      // 记录信号
       recordSignal('short', s.price, s.price + 10, s.price - 10);
     }
   } else {
