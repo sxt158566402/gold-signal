@@ -659,8 +659,9 @@ function checkStale(){
 }
 setInterval(checkStale, 10000);
 
-/* ===== 前端直接从OKX获取数据（防掉线） ===== */
+/* ===== 看门狗：data.json过期自动切换Bitget API ===== */
 var useFrontendData = false;
+var watchdogFailCount = 0;
 
 function calcEMA(data, period){
   var k = 2 / (period + 1);
@@ -758,15 +759,17 @@ try{
     var jd = await r.json();
     if(!jd.error) {
       var age = (Date.now() - jd.timestamp) / 1000;
-      if(age < 3600) { d = jd; useFrontendData = false; console.log('使用data.json, age=' + age + 's'); }
+      if(age < 300) { d = jd; useFrontendData = false; console.log('✅ data.json, age=' + age + 's'); }
+    else { console.log('⚠️ data.json过期 ' + age + 's, 切换Bitget API'); }
     }
   } catch(e){ console.log('data.json失败:', e.message); }
   if(!d){
-    console.log('data.json不可用，尝试Bitget API...');
+    console.log('看门狗: 启动Bitget API...');
     d = await fetchFromOKX();
-    if(d) useFrontendData = true;
+    if(d) { useFrontendData = true; watchdogFailCount = 0; }
+    else { watchdogFailCount++; console.log('看门狗: Bitget失败, 第' + watchdogFailCount + '次'); }
   }
-  if(!d) throw new Error('No data available');
+  if(!d) throw new Error('看门狗: data.json过期且Bitget API不可用(' + watchdogFailCount + '次)');
   var t = d.ticker;
   var s = d.strategy;
   var p = parseFloat(t.lastPrice);
@@ -788,7 +791,7 @@ try{
   
   lastTs = d.timestamp;
   var age = Math.floor((Date.now() - d.timestamp) / 1000);
-  var src = d.source === 'frontend-okx' ? ' | 📡前端模式' : '';
+  var src = d.source === 'frontend-okx' ? ' | 🐕看门狗模式' : '';
   var status = age < 90 ? '✅ 實時' : '⚠️ 延遲 ' + age + '秒';
   document.getElementById('dt').textContent = '更新: ' + ft(d.timestamp) + ' | ' + status + src;
   sc(true, '已連接');
