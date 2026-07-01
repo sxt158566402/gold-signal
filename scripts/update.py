@@ -778,7 +778,21 @@ if can_trade and (trend_down or trend_up):
 if skip_event:
     reasons.append(f'⚠️{event_reason}暂停交易')
 if in_cooldown:
-    reasons.append('⏸️信号冷却中(15min)')
+    # 冷却期间保持上一个信号，不要变回waiting（防止信号闪烁）
+    last = load_last_signal()
+    if last.get('signal') in ('short', 'long') and last.get('mode') != 'breakout':
+        signal = last['signal']
+        signal_mode = last.get('mode', '')
+        entry_price = last.get('entry_price', 0)
+        if signal == 'short':
+            sl = entry_price + 10 if entry_price else 0
+            tp = entry_price - 10 if entry_price else 0
+        elif signal == 'long':
+            sl = entry_price - 10 if entry_price else 0
+            tp = entry_price + 10 if entry_price else 0
+        reasons.append(f'⏸️信号维持中(冷却{int(900-(datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(last["time"])).total_seconds())}s)')
+    else:
+        reasons.append('⏸️信号冷却中(15min)')
 
 # ===== 回测 =====
 bt_result = backtest(k4h, k1d)
