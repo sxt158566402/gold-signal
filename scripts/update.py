@@ -50,9 +50,64 @@ def is_in_cooldown():
     try:
         elapsed = (datetime.datetime.now(datetime.timezone.utc) -
                    datetime.datetime.fromisoformat(last['time'])).total_seconds()
-        return elapsed < 900  # 15分钟冷却（剥头皮模式）
+        return elapsed < 900  # 15分钟冷却
     except:
         return False
+
+def get_signal_age_seconds():
+    """返回上一个信号已经持续了多少秒"""
+    last = load_last_signal()
+    if not last.get('time'):
+        return 0
+    try:
+        return (datetime.datetime.now(datetime.timezone.utc) -
+                datetime.datetime.fromisoformat(last['time'])).total_seconds()
+    except:
+        return 0
+
+def get_last_signal_first_time():
+    """获取信号第一次触发的时间（用于判断信号持续了多久）"""
+    last = load_last_signal()
+    return last.get('first_time', last.get('time', ''))
+
+def save_last_signal(sig):
+    try:
+        old = load_last_signal()
+        old_signal = old.get('signal', '')
+        new_signal = sig.get('signal', '')
+        
+        if old_signal == new_signal and old.get('first_time'):
+            # 信号方向没变，保留 first_time 和已有提醒标记
+            sig['first_time'] = old['first_time']
+            # 保留提醒标记
+            if old.get('reminded_duration'):
+                sig['reminded_duration'] = True
+            if old.get('reminded_entry'):
+                sig['reminded_entry'] = True
+        elif new_signal in ('short', 'long'):
+            # 新信号方向，重置 first_time，不带提醒标记
+            sig['first_time'] = sig.get('time', datetime.datetime.now(datetime.timezone.utc).isoformat())
+        # waiting/breakout 不需要 first_time 和提醒标记
+        
+        with open(SIGNAL_COOLDOWN_FILE, 'w') as f:
+            json.dump(sig, f)
+    except:
+        pass
+
+def has_reminded(reminder_type):
+    """检查是否已经发过某种提醒（进场提醒/持续提醒）"""
+    last = load_last_signal()
+    return last.get(f'reminded_{reminder_type}', False)
+
+def mark_reminded(reminder_type):
+    """标记已发过某种提醒"""
+    last = load_last_signal()
+    last[f'reminded_{reminder_type}'] = True
+    try:
+        with open(SIGNAL_COOLDOWN_FILE, 'w') as f:
+            json.dump(last, f)
+    except:
+        pass
 
 # ===== 事件过滤 =====
 def is_high_impact_window():
@@ -775,22 +830,56 @@ if can_trade and (trend_down or trend_up):
             'entry_price': entry_price
         })
 
+# ===== 三种提醒逻辑（写入 data.json 供微信bot读取） =====
+needs_reminder = ''  # 'duration' = 信号持续超1小时, 'entry' = 价格到进场价附近
+last = load_last_signal()
+if last.get('signal') in ('short', 'long') and last.get('entry_price') and last.get('entry_price', 0) > 0:
+    signal_age = get_signal_age_seconds()
+    first_time = last.get('first_time', last.get('time', ''))
+    if first_time:
+        try:
+            signal_total_age = (datetime.datetime.now(datetime.timezone.utc) -
+                               datetime.datetime.fromisoformat(first_time)).total_seconds()
+        except:
+            signal_total_age = 0
+    else:
+        signal_total_age = 0
+
+    # A：信号持续超过1小时，提醒"信号持续中"
+    if signal_total_age > 3600 and not has_reminded('duration'):
+        needs_reminder = 'duration'
+        mark_reminded('duration')
+
+    # C：价格接近进场参考价（距离<5美金），提醒"进场提醒"
+    entry_ref = last.get('entry_price', 0)
+    if entry_ref and abs(price - entry_ref) < 5 and not has_reminded('entry'):
+        needs_reminder = 'entry'
+        mark_reminded('entry')
+
 if skip_event:
     reasons.append(f'⚠️{event_reason}暂停交易')
 if in_cooldown:
     # 冷却期间保持上一个信号，不要变回waiting（防止信号闪烁）
     last = load_last_signal()
     if last.get('signal') in ('short', 'long') and last.get('mode') != 'breakout':
-        signal = last['signal']
-        signal_mode = last.get('mode', '')
-        entry_price = last.get('entry_price', 0)
-        if signal == 'short':
-            sl = entry_price + 10 if entry_price else 0
-            tp = entry_price - 10 if entry_price else 0
-        elif signal == 'long':
-            sl = entry_price - 10 if entry_price else 0
-            tp = entry_price + 10 if entry_price else 0
-        reasons.append(f'⏸️信号维持中(冷却{int(900-(datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(last["time"])).total_seconds())}s)')
+        # B：RSI(1h) > 70 时信号降级为"观察"，不再维持
+        if rsi_1h > 70:
+            signal = 'waiting'
+            signal_mode = 'observe'
+            reasons.insert(0, f'🔍【信号降级】RSI(1h)={rsi_1h:.0f}过高(>70)，信号转为观察，等RSI回敲再进')
+            reasons.append('⏸️等待RSI回敲后再进场')
+        else:
+            signal = last['signal']
+            signal_mode = last.get('mode', '')
+            entry_price = last.get('entry_price', 0)
+            if signal == 'short':
+                sl = entry_price + 10 if entry_price else 0
+                tp = entry_price - 10 if entry_price else 0
+            elif signal == 'long':
+                sl = entry_price - 10 if entry_price else 0
+                tp = entry_price + 10 if entry_price else 0
+            cooldown_remain = int(900-(datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(last["time"])).total_seconds())
+            reasons.append(f'⏸️信号维持中(冷却{cooldown_remain}s)')
     else:
         reasons.append('⏸️信号冷却中(15min)')
 
@@ -820,6 +909,8 @@ data = {
         'signal_mode': signal_mode,
         'price': price,
         'reason': ' | '.join(reasons),
+        'needs_reminder': needs_reminder,
+        'entry_price': round(entry_price, 2) if entry_price > 0 else 0,
         'indicators': {
             'rsi': round(rsi_1h, 1),
             'ema7': round(ema7_1h, 2),
@@ -887,7 +978,9 @@ data = {
             'range_low': round(range_low, 2),
             'price_vs_ema25': round((price - ema25_d) / ema25_d * 100, 2) if ema25_d > 0 else 0
         },
-        'backtest': bt_result
+        'backtest': bt_result,
+        'signal_age': int(get_signal_age_seconds()) if last.get('signal') in ('short', 'long') else 0,
+        'needs_reminder': needs_reminder
     },
     'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000),
     'source': 'vps-rainyun-v7'
