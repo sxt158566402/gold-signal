@@ -900,33 +900,33 @@ try{
     html += '<div>\u65e5\u7ebfEMA50: <b>$' + f(daily.ema50) + '</b></div>';
     html += '<hr style="border:0;border-top:1px solid #333;margin:6px 0">';
     // v7核心：提前检测快横盘
-    var sc = s.scalp || {};
-    if(sc.pre_consolidating){
-      var preScore = sc.pre_score || 0;
-      var preConds = sc.pre_conditions || [];
+    var scalp = s.scalp || {};
+    if(scalp.pre_consolidating){
+      var preScore = scalp.pre_score || 0;
+      var preConds = scalp.pre_conditions || [];
       var condsText = preConds.length ? preConds.join(' + ') : '无';
       html += '<div style="font-size:13px;color:#ffa502;font-weight:700;margin-bottom:4px">🔍 快横盘预警:</div>';
       html += '<div style="color:#2ed573">✅ 评分' + preScore + '/8 [' + condsText + ']</div>';
-      if(sc.range_high && sc.range_low){
-        html += '<div>参考区间: $' + f(sc.range_low) + ' ~ $' + f(sc.range_high) + '</div>';
-        if(sc.entry_price > 0){
-          html += '<div style="color:#ffa502;font-weight:700">📌 进场参考价: $' + f(sc.entry_price) + ' (等价格回到此位置再进)</div>';
+      if(scalp.range_high && scalp.range_low){
+        html += '<div>参考区间: $' + f(scalp.range_low) + ' ~ $' + f(scalp.range_high) + '</div>';
+        if(scalp.entry_price > 0){
+          html += '<div style="color:#ffa502;font-weight:700">📌 进场参考价: $' + f(scalp.entry_price) + ' (等价格回到此位置再进)</div>';
         }
       }
-      if(sc.breakout_up){
+      if(scalp.breakout_up){
         html += '<div style="color:#ff4757;font-weight:700">⚠️ 破位向上! 放弃本轮等下一轮</div>';
       }
-      html += '<div style="font-size:11px;color:#888;margin-top:4px">止损' + (sc.stop_loss_points||10) + '点 | 止盈' + (sc.take_profit_points||10) + '点 | ' + (sc.trailing_stop?'推动止盈✅':'') + '</div>';
-    } else if(sc.consolidating){
-      var edgeColor = sc.edge_type==='upper'?'#ff4757':(sc.edge_type==='lower'?'#2ed573':'#ffa502');
-      var edgeText = sc.edge_type==='upper'?'上沿(做空位)':(sc.edge_type==='lower'?'下沿(做多位)':'中间');
+      html += '<div style="font-size:11px;color:#888;margin-top:4px">止损' + (scalp.stop_loss_points||10) + '点 | 止盈' + (scalp.take_profit_points||10) + '点 | ' + (scalp.trailing_stop?'推动止盈✅':'') + '</div>';
+    } else if(scalp.consolidating){
+      var edgeColor = scalp.edge_type==='upper'?'#ff4757':(scalp.edge_type==='lower'?'#2ed573':'#ffa502');
+      var edgeText = scalp.edge_type==='upper'?'上沿(做空位)':(scalp.edge_type==='lower'?'下沿(做多位)':'中间');
       html += '<div style="font-size:13px;color:#666;font-weight:700;margin-bottom:4px">🔍 横盘确认 (备用)</div>';
-      html += '<div style="color:#2ed573">横盘区间: $' + f(sc.range_low) + ' ~ $' + f(sc.range_high) + '</div>';
+      html += '<div style="color:#2ed573">横盘区间: $' + f(scalp.range_low) + ' ~ $' + f(scalp.range_high) + '</div>';
       html += '<div>价格位置: <b style="color:' + edgeColor + '">' + edgeText + '</b></div>';
     } else {
-      html += '<div style="font-size:13px;color:#666;font-weight:700;margin-bottom:4px">🔍 快横盘检测: 评分' + (sc.pre_score||0) + '/8 (未达标)</div>';
-      if(sc.range_high && sc.range_low){
-        html += '<div style="font-size:11px;color:#888">参考区间: $' + f(sc.range_low) + ' ~ $' + f(sc.range_high) + '</div>';
+      html += '<div style="font-size:13px;color:#666;font-weight:700;margin-bottom:4px">🔍 快横盘检测: 评分' + (scalp.pre_score||0) + '/8 (未达标)</div>';
+      if(scalp.range_high && scalp.range_low){
+        html += '<div style="font-size:11px;color:#888">参考区间: $' + f(scalp.range_low) + ' ~ $' + f(scalp.range_high) + '</div>';
       }
       html += '<div style="font-size:11px;color:#888">等待数据达标...</div>';
     }
