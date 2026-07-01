@@ -1,26 +1,18 @@
 #!/usr/bin/env python3
-"""Gold Sniper v7 - 提前检测快横盘+推送最高价+破位放弃
+"""Gold Sniper v6 - 回踩横盘剥头皮策略
 
 核心逻辑：
   1. 日线定方向：找最近18+根K线的盘整区间，破位确认趋势
-  2. 提前检测快横盘：不用等横盘确认，通过数据分析判断快横盘了
-     - RSI回升到50+
-     - 价格反弹到EMA25压力位附近
-     - K线实体逐渐缩小
-     - 连续上涨/下跌根数
-     - 反弹/回调幅度
-     - 综合评分 >= 3 = 快横盘了
-  3. 信号推送横盘最高价（不是当前价格），用户自己等高位进场
-  4. 破位检测：横盘被突破往上走 → 推送"放弃本轮，等下一轮"
-  5. 止损10点，止盈10点，推动止盈只做提醒（手动操作）
+  2. 回踩横盘检测：价格反弹后，1H连续3根+K线波幅收窄(<15点) = 横盘
+  3. 剥头皮入场：横盘区间上沿做空/下沿做多
+  4. 止损10点，止盈10点，推动止盈
+  5. 只顺趋势方向做单
   6. 多头趋势反过来做（在横盘下沿做多）
-  7. 冷却15分钟
 
-v7改进：
-  - 从"等横盘形成"改为"提前分析快横盘"
-  - 信号推送横盘区间最高价（不是当前价格）
-  - 新增破位放弃本轮检测
-  - 止损止盈只做提醒，不自动执行
+v6改进：
+  - 核心从EMA回踩改为横盘区间检测
+  - 止损止盈改为固定10点（剥头皮模式）
+  - 冷却从1小时改为15分钟（剥头皮需要更高频率）
   - 保留三种模式A/B/C作为辅助确认
   - 推动止盈提醒
 """
@@ -216,174 +208,6 @@ def check_h1_stabilize(klines_1h, closes_1h, trend_dir):
                 details.append('收阴企稳')
     return score >= 2, score, details
 
-# ===== 提前检测快横盘（v7核心） =====
-def detect_pre_consolidation(klines_1h, closes_1h, klines_4h, closes_4h, trend_dir, price):
-    """
-    提前检测快横盘：不用等横盘确认，通过数据分析判断快横盘了。
-    
-    下跌趋势 → 反弹中，判断反弹是否快到顶了
-    上涨趋势 → 回调中，判断回调是否快到底了
-    
-    评分条件（下跌趋势）：
-      1. RSI(1h)从低位回升到50+ = 反弹中
-      2. 价格接近EMA25(1h)压力位 = 接近阻力
-      3. K线实体逐渐缩小 = 力度减弱
-      4. 连续上涨根数 >= 3 = 已经涨了一段
-      5. 反弹幅度 >= 30美金 = 回踩幅度够了
-      6. RSI(4h)在40-60 = 4小时级别也在反弹
-      7. 价格接近布林带(1h)上轨 = 接近阻力
-      
-    评分 >= 3 = 快横盘了
-    
-    返回: (is_pre_consolidating, score, conditions, range_high, range_low, breakout_up)
-      breakout_up = True 表示横盘已破位往上走，放弃本轮
-    """
-    if len(klines_1h) < 20 or len(klines_4h) < 10:
-        return False, 0, [], 0, 0, False
-
-    conditions = []
-    score = 0
-
-    # 1H指标
-    rsi_1h = calc_rsi(closes_1h, 14)
-    rsi_1h_prev = calc_rsi(closes_1h[-16:-1], 14) if len(closes_1h) > 16 else rsi_1h
-    ema25_1h = calc_ema(closes_1h, 25)
-    bb_mid_1h, bb_up_1h, bb_low_1h, _ = calc_bb(closes_1h, 20)
-    atr_1h = calc_atr(klines_1h, 14)
-
-    # 4H指标
-    rsi_4h = calc_rsi(closes_4h, 14)
-    ema25_4h = calc_ema(closes_4h, 25)
-
-    # 最近10根1H K线
-    last10 = klines_1h[-10:]
-    last10_closes = [float(k[4]) for k in last10]
-    last10_highs = [float(k[2]) for k in last10]
-    last10_lows = [float(k[3]) for k in last10]
-
-    # 横盘区间 = 最近10根K线的高低点（作为参考区间）
-    range_high = max(last10_highs)
-    range_low = min(last10_lows)
-
-    # ===== 下跌趋势：判断反弹是否快到顶 =====
-    if trend_dir == '下跌':
-        # 1. RSI(1h)回升到50+
-        if rsi_1h >= 50:
-            score += 1
-            conditions.append(f'RSI(1h)回升到{rsi_1h:.0f}')
-        
-        # 2. RSI(1h)拐头向上
-        if rsi_1h > rsi_1h_prev:
-            score += 1
-            conditions.append('RSI拐头向上')
-        
-        # 3. 价格接近EMA25(1h)压力位（距离 < 1.5 ATR）
-        dist_ema25 = abs(price - ema25_1h) / atr_1h if atr_1h > 0 else 999
-        if dist_ema25 < 1.5:
-            score += 1
-            conditions.append(f'接近EMA25压力位(距{dist_ema25:.1f}ATR)')
-        
-        # 4. K线实体逐渐缩小（最近3根实体 < 前3根实体）
-        last3_bodies = [abs(float(k[4]) - float(k[1])) for k in klines_1h[-3:]]
-        prev3_bodies = [abs(float(k[4]) - float(k[1])) for k in klines_1h[-6:-3]]
-        if prev3_bodies and sum(last3_bodies) < sum(prev3_bodies) * 0.8:
-            score += 1
-            conditions.append('K线实体缩小(力度减弱)')
-        
-        # 5. 连续上涨根数 >= 3
-        consec_up = 0
-        for k in reversed(klines_1h[-8:]):
-            if float(k[4]) > float(k[1]):
-                consec_up += 1
-            else:
-                break
-        if consec_up >= 3:
-            score += 1
-            conditions.append(f'连涨{consec_up}根')
-        
-        # 6. 反弹幅度 >= 30美金
-        if len(closes_1h) >= 7:
-            rebound = price - min(last10_lows)
-            if rebound >= 30:
-                score += 1
-                conditions.append(f'反弹{rebound:.0f}美金')
-        
-        # 7. RSI(4h)在40-60 = 4小时也在反弹
-        if 40 <= rsi_4h <= 65:
-            score += 1
-            conditions.append(f'RSI(4h)={rsi_4h:.0f}(4H也反弹)')
-        
-        # 8. 价格接近布林带(1h)上轨
-        dist_bb_up = (bb_up_1h - price) / atr_1h if atr_1h > 0 else 999
-        if dist_bb_up > -0.5 and dist_bb_up < 1.0:
-            score += 1
-            conditions.append('接近布林上轨')
-
-    # ===== 上涨趋势：判断回调是否快到底 =====
-    elif trend_dir == '上涨':
-        # 1. RSI(1h)回落到50以下
-        if rsi_1h <= 55:
-            score += 1
-            conditions.append(f'RSI(1h)回落到{rsi_1h:.0f}')
-        
-        # 2. RSI(1h)拐头向下
-        if rsi_1h < rsi_1h_prev:
-            score += 1
-            conditions.append('RSI拐头向下')
-        
-        # 3. 价格接近EMA25(1h)支撑位
-        dist_ema25 = abs(price - ema25_1h) / atr_1h if atr_1h > 0 else 999
-        if dist_ema25 < 1.5:
-            score += 1
-            conditions.append(f'接近EMA25支撑位(距{dist_ema25:.1f}ATR)')
-        
-        # 4. K线实体逐渐缩小
-        last3_bodies = [abs(float(k[4]) - float(k[1])) for k in klines_1h[-3:]]
-        prev3_bodies = [abs(float(k[4]) - float(k[1])) for k in klines_1h[-6:-3]]
-        if prev3_bodies and sum(last3_bodies) < sum(prev3_bodies) * 0.8:
-            score += 1
-            conditions.append('K线实体缩小(力度减弱)')
-        
-        # 5. 连续下跌根数 >= 3
-        consec_down = 0
-        for k in reversed(klines_1h[-8:]):
-            if float(k[4]) < float(k[1]):
-                consec_down += 1
-            else:
-                break
-        if consec_down >= 3:
-            score += 1
-            conditions.append(f'连跌{consec_down}根')
-        
-        # 6. 回调幅度 >= 30美金
-        if len(closes_1h) >= 7:
-            pullback = max(last10_highs) - price
-            if pullback >= 30:
-                score += 1
-                conditions.append(f'回调{pullback:.0f}美金')
-        
-        # 7. RSI(4h)在35-60
-        if 35 <= rsi_4h <= 60:
-            score += 1
-            conditions.append(f'RSI(4h)={rsi_4h:.0f}(4H也回调)')
-        
-        # 8. 价格接近布林带(1h)下轨
-        dist_bb_low = (price - bb_low_1h) / atr_1h if atr_1h > 0 else 999
-        if dist_bb_low > -0.5 and dist_bb_low < 1.0:
-            score += 1
-            conditions.append('接近布林下轨')
-
-    # ===== 破位检测 =====
-    # 横盘区间被突破往上走 = 放弃本轮
-    breakout_up = False
-    if range_high > 0 and price > range_high + atr_1h * 0.5:
-        breakout_up = True
-
-    # 快横盘 = 评分 >= 3
-    is_pre_consolidating = score >= 3
-
-    return is_pre_consolidating, score, conditions, round(range_high, 2), round(range_low, 2), breakout_up
-
 # ===== 回踩横盘检测（v6核心） =====
 def detect_pullback_consolidation(klines_1h, closes_1h, trend_dir, price):
     """
@@ -473,7 +297,6 @@ def detect_pullback_consolidation(klines_1h, closes_1h, trend_dir, price):
 
     # 如果只是横盘但不在边缘，仍然标记横盘但不给信号
     return is_consolidating, round(range_high, 2), round(range_low, 2), round(range_size, 2), bars_in, near_edge, edge_type
-
 
 # ===== 回测引擎（v6：剥头皮回踩横盘） =====
 def backtest(klines_4h, klines_1d, initial_capital=10000):
@@ -636,15 +459,44 @@ bb_mid_1h, bb_up_1h, bb_low_1h, bb_std_1h = calc_bb(closes_1h, 20)
 trend_down = (trend_dir == '下跌')
 trend_up = (trend_dir == '上涨')
 
-# ===== v7核心：提前检测快横盘 =====
-is_pre_consolidating, pre_score, pre_conditions, consol_high, consol_low, breakout_up = \
-    detect_pre_consolidation(k1h, closes_1h, k4h, closes_4h, trend_dir, price)
-
-# v6备用：横盘确认检测（保留作为备用参考）
-is_consolidating, consol_high_v6, consol_low_v6, consol_size_v6, consol_bars_v6, near_edge, edge_type = \
+# ===== v6核心：回踩横盘检测 =====
+is_consolidating, consol_high, consol_low, consol_size, consol_bars, near_edge, edge_type = \
     detect_pullback_consolidation(k1h, closes_1h, trend_dir, price)
 
-# 辅助参考
+# ===== 辅助：三种入场模式判断（保留作为参考） =====
+# 模式A：超卖反弹做空 / 超买回调做多
+mode_a = False
+mode_a_reason = ''
+if trend_down and rsi_4h < 20:
+    mode_a = True
+    mode_a_reason = f'模式A:超卖反弹做空(RSI4h={rsi_4h:.0f}<20)'
+elif trend_up and rsi_4h > 80:
+    mode_a = True
+    mode_a_reason = f'模式A:超买回调做多(RSI4h={rsi_4h:.0f}>80)'
+
+# 模式B：回踩EMA7
+mode_b = False
+mode_b_reason = ''
+dist_ema7 = abs(price - ema7_4h) / atr_4h if atr_4h > 0 else 999
+if trend_down and dist_ema7 < 1.0 and price < ema25_4h:
+    mode_b = True
+    mode_b_reason = f'模式B:回踩EMA7做空(距{dist_ema7:.1f}ATR)'
+elif trend_up and dist_ema7 < 1.0 and price > ema25_4h:
+    mode_b = True
+    mode_b_reason = f'模式B:回踩EMA7做多(距{dist_ema7:.1f}ATR)'
+
+# 模式C：回踩EMA25
+mode_c = False
+mode_c_reason = ''
+dist_ema25 = abs(price - ema25_4h) / atr_4h if atr_4h > 0 else 999
+if trend_down and dist_ema25 < 1.5:
+    mode_c = True
+    mode_c_reason = f'模式C:回踩EMA25做空(距{dist_ema25:.1f}ATR)'
+elif trend_up and dist_ema25 < 1.5:
+    mode_c = True
+    mode_c_reason = f'模式C:回踩EMA25做多(距{dist_ema25:.1f}ATR)'
+
+# 1H企稳确认（辅助参考，不再是必须条件）
 h1_stable, h1_score, h1_details = check_h1_stabilize(k1h, closes_1h, trend_dir)
 
 # ===== 仓位管理（剥头皮模式：100美金风险，0.01手） =====
@@ -675,104 +527,107 @@ reasons.append(f'RSI(d):{rsi_d:.0f} RSI(4h):{rsi_4h:.0f} RSI(1h):{rsi_1h:.0f}')
 reasons.append(f'ATR(4h):{atr_4h:.0f}')
 reasons.append(f'EMA25(d):{ema25_d:.0f} EMA50(d):{ema50_d:.0f}')
 
-# v7核心：快横盘状态
-if is_pre_consolidating:
-    reasons.append(f'🔍快横盘预警✅ 评分{pre_score}/8 [{" + ".join(pre_conditions)}]')
+# v6核心：横盘状态
+if is_consolidating:
+    edge_str = '上沿(做空位)' if edge_type == 'upper' else ('下沿(做多位)' if edge_type == 'lower' else '中间')
+    reasons.append(f'🔍回踩横盘✅ 区间{consol_low:.0f}~{consol_high:.0f}({consol_size:.1f}点) {consol_bars}根 价格在{edge_str}')
 else:
-    reasons.append(f'快横盘:未达标(评分{pre_score}/8)')
+    reasons.append(f'回踩横盘:未形成(1H波幅未收窄)')
 
-# 横盘区间
-if consol_high > 0:
-    reasons.append(f'参考区间:{consol_low:.0f}~{consol_high:.0f}(最高价{consol_high:.0f})')
-    if breakout_up:
-        reasons.append(f'⚠️破位向上! 价格{price:.0f}突破区间上沿{consol_high:.0f} 放弃本轮等下一轮')
+# 辅助模式状态
+mode_status = []
+if mode_a: mode_status.append('A✅')
+if mode_b: mode_status.append('B✅')
+if mode_c: mode_status.append('C✅')
+if not mode_status: mode_status.append('等待中')
+reasons.append(f'辅助模式:{"|".join(mode_status)}')
 
-reasons.append(f'1H企稳:{h1_stable}({h1_score}/2)')
+if mode_a: reasons.append(mode_a_reason)
+if mode_b: reasons.append(mode_b_reason)
+if mode_c: reasons.append(mode_c_reason)
 
-# === v7信号触发：提前检测快横盘+推送最高价 ===
+# 1H企稳状态
+if h1_stable:
+    reasons.append(f'1H企稳✅({",".join(h1_details)})')
+else:
+    reasons.append(f'1H未企稳({h1_score}/2)')
+
+reasons.append(f'距EMA7(4h):{dist_ema7:.1f}ATR 距EMA25(4h):{dist_ema25:.1f}ATR')
+
+# === v6信号触发：回踩横盘剥头皮 ===
 sl = 0
 tp = 0
-entry_price = 0  # 进场参考价（横盘最高价/最低价）
 
 if can_trade and (trend_down or trend_up):
     triggered = False
 
-    # === 破位检测：横盘被突破往上走 → 放弃本轮 ===
-    if breakout_up and consol_high > 0:
-        signal = 'waiting'
-        signal_mode = 'breakout'
-        triggered = True  # 触发但不给交易信号，只推送提醒
-        reasons.insert(0, f'🔊【破位放弃】价格突破横盘上沿{consol_high:.0f}往上走，放弃本轮等下一轮')
-        save_last_signal({
-            'time': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            'signal': 'waiting',
-            'price': price,
-            'mode': 'breakout'
-        })
-
-    # === 核心模式：快横盘预警 → 推送横盘最高价 ===
-    elif not triggered and is_pre_consolidating and not breakout_up:
-        triggered = True
-        signal_mode = 'pre_consolidation'
-
-        if trend_down:
-            # 下跌趋势：推送横盘最高价，用户等高位做空
-            signal = 'short'
-            entry_price = consol_high  # 进场参考价 = 横盘最高价
-            sl = entry_price + 10  # 止损 = 最高价 + 10点
-            tp = entry_price - 10  # 止盈 = 最高价 - 10点
-            reasons.insert(0, f'🔊【快横盘预警】等高位做空')
-            reasons.append(f'📌进场参考价:横盘最高价 {entry_price:.0f} (等价格回到{entry_price:.0f}附近再进)')
-            reasons.append(f'止损:{sl:.0f}(+10点) 止盈:{tp:.0f}(-10点)')
-            reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
-            reasons.append(f'💡推动止盈:盈利10点后止损移到进场价(手动操作)')
-            reasons.append(f'⚠️破位提醒:如果价格突破{consol_high:.0f}往上走，放弃本轮等下一轮')
-
-        elif trend_up:
-            # 上涨趋势：推送横盘最低价，用户等低位做多
-            signal = 'long'
-            entry_price = consol_low  # 进场参考价 = 横盘最低价
-            sl = entry_price - 10
-            tp = entry_price + 10
-            reasons.insert(0, f'🔊【快横盘预警】等低位做多')
-            reasons.append(f'📌进场参考价:横盘最低价 {entry_price:.0f} (等价格回到{entry_price:.0f}附近再进)')
-            reasons.append(f'止损:{sl:.0f}(-10点) 止盈:{tp:.0f}(+10点)')
-            reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
-            reasons.append(f'💡推动止盈:盈利10点后止损移到进场价(手动操作)')
-            reasons.append(f'⚠️破位提醒:如果价格跌破{consol_low:.0f}往下走，放弃本轮等下一轮')
-
-    # === 备用模式：v6横盘确认 + 价格在边缘（如果提前检测没触发） ===
-    elif not triggered and is_consolidating and near_edge:
+    # 核心模式：回踩横盘 + 价格在区间边缘
+    if not triggered and is_consolidating and near_edge:
         triggered = True
         signal_mode = 'scalp'
 
         if trend_down and edge_type == 'upper':
+            # 下跌趋势 + 价格在横盘上沿 = 做空
             signal = 'short'
-            entry_price = price
-            sl = price + 10
-            tp = price - 10
-            reasons.insert(0, f'🔊【横盘确认】横盘上沿做空')
+            sl = price + 10  # 止损10点
+            tp = price - 10  # 止盈10点
+            reasons.insert(0, f'🔊【剥头皮】回踩横盘上沿做空')
             reasons.append(f'止损:{sl:.0f}(+10点) 止盈:{tp:.0f}(-10点)')
             reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
-            reasons.append(f'💡推动止盈:盈利10点后止损移到进场价(手动操作)')
+            reasons.append(f'💡推动止盈:盈利10点后止损移到进场价')
 
         elif trend_up and edge_type == 'lower':
+            # 上涨趋势 + 价格在横盘下沿 = 做多
             signal = 'long'
-            entry_price = price
             sl = price - 10
             tp = price + 10
-            reasons.insert(0, f'🔊【横盘确认】横盘下沿做多')
+            reasons.insert(0, f'🔊【剥头皮】回踩横盘下沿做多')
             reasons.append(f'止损:{sl:.0f}(-10点) 止盈:{tp:.0f}(+10点)')
             reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
-            reasons.append(f'💡推动止盈:盈利10点后止损移到进场价(手动操作)')
+            reasons.append(f'💡推动止盈:盈利10点后止损移到进场价')
 
-    if triggered and signal != 'waiting':
+    # 备用模式A：超卖/超买 + 1H企稳
+    if not triggered and mode_a and h1_stable:
+        triggered = True
+        signal_mode = 'A'
+        if trend_down:
+            signal = 'short'
+            sl = price + 10
+            tp = price - 10
+            reasons.insert(0, f'🔊【模式A】超卖反弹做空')
+        else:
+            signal = 'long'
+            sl = price - 10
+            tp = price + 10
+            reasons.insert(0, f'🔊【模式A】超买回调做多')
+        reasons.append(f'止损:{sl:.0f} 止盈:{tp:.0f}')
+        reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
+        reasons.append(f'💡推动止盈:盈利10点后止损移到进场价')
+
+    # 备用模式B：回踩EMA7 + 1H企稳
+    if not triggered and mode_b and h1_stable:
+        triggered = True
+        signal_mode = 'B'
+        if trend_down:
+            signal = 'short'
+            sl = price + 10
+            tp = price - 10
+            reasons.insert(0, f'🔊【模式B】回踩EMA7做空')
+        else:
+            signal = 'long'
+            sl = price - 10
+            tp = price + 10
+            reasons.insert(0, f'🔊【模式B】回踩EMA7做多')
+        reasons.append(f'止损:{sl:.0f} 止盈:{tp:.0f}')
+        reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
+        reasons.append(f'💡推动止盈:盈利10点后止损移到进场价')
+
+    if triggered:
         save_last_signal({
             'time': datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'signal': signal,
             'price': price,
-            'mode': signal_mode,
-            'entry_price': entry_price
+            'mode': signal_mode
         })
 
 if skip_event:
@@ -784,9 +639,8 @@ if in_cooldown:
 bt_result = backtest(k4h, k1d)
 
 print(f'Price={price:.2f} Trend={trend_dir}({trend_strength:.0f}%) RSI4h={rsi_4h:.1f} RSI1h={rsi_1h:.1f} ATR={atr_4h:.0f} Signal={signal}')
-print(f'24h={h24_change:+.2f}% PreScore={pre_score}/8 H1stable={h1_stable}({h1_score}/2)')
-print(f'PreConsolidation: score={pre_score}/8 is_pre={is_pre_consolidating} breakout_up={breakout_up}')
-print(f'Consolidation: {is_consolidating} range={consol_low:.0f}~{consol_high:.0f} edge={edge_type}')
+print(f'24h={h24_change:+.2f}% ModeA={mode_a} ModeB={mode_b} ModeC={mode_c} H1stable={h1_stable}({h1_score}/2)')
+print(f'Consolidation: {is_consolidating} range={consol_low:.0f}~{consol_high:.0f}({consol_size:.1f}pts) bars={consol_bars} edge={edge_type}')
 print(f'Breakout: type={breakout_type} bars={bars_in_range} range={range_low:.0f}~{range_high:.0f}')
 if bt_result:
     print(f'Backtest: {bt_result["note"]}')
@@ -827,14 +681,17 @@ data = {
             'trend_strength': round(trend_strength, 2),
             'oscillating': h1_stable,
             'osc_score': h1_score,
-            'pullback': is_pre_consolidating,
+            'pullback': mode_a or mode_b or mode_c,
             'pullback_distance': round((price - ema25_4h) / atr_4h, 2) if atr_4h > 0 else 0,
-            'far_from_ema25': abs(price - ema25_4h) / atr_4h > 3 if atr_4h > 0 else False,
+            'far_from_ema25': dist_ema25 > 3,
             'oversold': rsi_4h < 30,
             'overbought': rsi_4h > 70,
-            'pre_consolidating': is_pre_consolidating,
-            'pre_score': pre_score,
-            'pre_conditions': pre_conditions,
+            'mode_a': mode_a,
+            'mode_b': mode_b,
+            'mode_c': mode_c,
+            'mode_a_reason': mode_a_reason,
+            'mode_b_reason': mode_b_reason,
+            'mode_c_reason': mode_c_reason,
             'h1_stable': h1_stable,
             'h1_score': h1_score,
             'h1_details': h1_details,
@@ -844,17 +701,14 @@ data = {
             'position_pct': round(position_pct, 1) if signal != 'waiting' else 0
         },
         'scalp': {
-            'pre_consolidating': is_pre_consolidating,
-            'pre_score': pre_score,
-            'pre_conditions': pre_conditions,
             'consolidating': is_consolidating,
             'range_high': consol_high,
             'range_low': consol_low,
-            'breakout_up': breakout_up,
-            'entry_price': round(entry_price, 2) if entry_price > 0 else 0,
+            'range_size': consol_size,
+            'bars_in_range': consol_bars,
             'near_edge': near_edge,
             'edge_type': edge_type,
-            'price_position': 'upper' if price > (consol_high + consol_low) / 2 else 'lower' if consol_high > 0 else 'none',
+            'price_position': 'upper' if price > (consol_high + consol_low) / 2 else 'lower' if is_consolidating else 'none',
             'stop_loss_points': 10,
             'take_profit_points': 10,
             'trailing_stop': True
@@ -876,7 +730,7 @@ data = {
         'backtest': bt_result
     },
     'timestamp': int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000),
-    'source': 'vps-rainyun-v7'
+    'source': 'vps-rainyun-v6'
 }
 
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'data.json')
