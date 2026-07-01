@@ -271,6 +271,129 @@ def check_h1_stabilize(klines_1h, closes_1h, trend_dir):
                 details.append('收阴企稳')
     return score >= 2, score, details
 
+# ===== 头肩顶检测（v7c核心） =====
+def detect_head_shoulders_top(klines_1h, closes_1h, price):
+    """
+    检测头肩顶形态：
+    左肩(LS) — 头部(H) — 右肩(RS)
+    条件：
+      1. 在最近15根K线内找到三个局部高点
+      2. 左肩 < 头部，右肩 < 头部（头部最高）
+      3. 左肩和右肩高度差不多（差值 < 30%头肩高度）
+      4. 右肩已经形成（当前价格已从右肩高点回落）
+      5. 颈线 = 左肩和右肩之间的低点
+    
+    返回: (detected, details_dict)
+      detected = True 表示检测到头肩顶
+      details_dict = {
+        'left_shoulder': 左肩价格,
+        'head': 头部价格,
+        'right_shoulder': 右肩价格,
+        'neckline': 颈线价格,
+        'right_shoulder_idx': 右肩是第几根K线前,
+        'bars_since_rs': 右肩形成后过了多少根K线,
+        'broke_neckline': 是否已破颈线
+      }
+    """
+    if len(klines_1h) < 15:
+        return False, {}
+    
+    # 取最近15根K线的高低点
+    recent = klines_1h[-15:]
+    highs = [float(k[2]) for k in recent]
+    lows = [float(k[3]) for k in recent]
+    n = len(highs)
+    
+    # 找局部高点（比前后2根都高）
+    peaks = []
+    for i in range(2, n - 2):
+        if highs[i] > highs[i-1] and highs[i] > highs[i-2] and \
+           highs[i] > highs[i+1] and highs[i] > highs[i+2]:
+            peaks.append((i, highs[i]))
+    
+    if len(peaks) < 3:
+        return False, {}
+    
+    # 尝试找最后三个高点组成头肩顶
+    # 从后往前找，取最后三个peak
+    for end in range(len(peaks), 2, -1):
+        ls = peaks[end-3]
+        head = peaks[end-2]
+        rs = peaks[end-1]
+        
+        ls_idx, ls_price = ls
+        h_idx, h_price = head
+        rs_idx, rs_price = rs
+        
+        # 条件1: 头部必须高于左肩和右肩
+        if h_price <= ls_price or h_price <= rs_price:
+            continue
+        
+        # 条件2: 左肩和右肩高度差不超过头部的30%
+        shoulder_diff = abs(ls_price - rs_price)
+        head_height = h_price - max(ls_price, rs_price)
+        if head_height > 0 and shoulder_diff > head_height * 2.5:
+            continue
+        
+        # 条件3: 三个高点之间有间隔（至少间隔2根）
+        if h_idx - ls_idx < 2 or rs_idx - h_idx < 2:
+            continue
+        
+        # 颈线 = 左肩和头部之间的低点 与 头部和右肩之间的低点 的较低值
+        neckline_left = min(lows[ls_idx:h_idx+1])
+        neckline_right = min(lows[h_idx:rs_idx+1])
+        neckline = min(neckline_left, neckline_right)
+        
+        # 条件4: 右肩已形成 — 当前价格已从右肩回落
+        current_price = price
+        bars_since_rs = n - 1 - rs_idx  # 右肩之后过了多少根K线
+        
+        # 右肩必须已经形成（至少过了1根K线）
+        if bars_since_rs < 1:
+            continue
+        
+        # 当前价格必须低于右肩（说明已从右肩回落）
+        if current_price > rs_price:
+            continue
+        
+        # 是否已破颈线
+        broke_neckline = current_price < neckline
+        
+        return True, {
+            'left_shoulder': round(ls_price, 2),
+            'head': round(h_price, 2),
+            'right_shoulder': round(rs_price, 2),
+            'neckline': round(neckline, 2),
+            'right_shoulder_idx': rs_idx,
+            'bars_since_rs': bars_since_rs,
+            'broke_neckline': broke_neckline
+        }
+    
+    return False, {}
+
+
+# ===== 横盘K线计数（v7c新增） =====
+def count_consolidation_bars(klines_1h, atr_1h):
+    """
+    计算最近连续横盘K线数量。
+    横盘K线定义：实体波幅 < 0.8 ATR 且整根K线波幅 < 1.2 ATR
+    
+    返回: 横盘K线根数
+    """
+    if not klines_1h or atr_1h <= 0:
+        return 0
+    
+    count = 0
+    for k in reversed(klines_1h[-6:]):  # 最多看最近6根
+        body = abs(float(k[4]) - float(k[1]))
+        full_range = float(k[2]) - float(k[3])
+        if body < atr_1h * 0.8 and full_range < atr_1h * 1.2:
+            count += 1
+        else:
+            break  # 遇到非横盘K线就中断
+    
+    return count
+
 # ===== 提前检测快横盘（v7核心） =====
 def detect_pre_consolidation(klines_1h, closes_1h, klines_4h, closes_4h, trend_dir, price):
     """
@@ -686,6 +809,7 @@ rsi_1h = calc_rsi(closes_1h, 14)
 ema7_1h = calc_ema(closes_1h, 7)
 ema25_1h = calc_ema(closes_1h, 25)
 bb_mid_1h, bb_up_1h, bb_low_1h, bb_std_1h = calc_bb(closes_1h, 20)
+atr_1h = calc_atr(k1h, 14)
 
 # ===== 趋势方向 =====
 trend_down = (trend_dir == '下跌')
@@ -694,6 +818,12 @@ trend_up = (trend_dir == '上涨')
 # ===== v7核心：提前检测快横盘 =====
 is_pre_consolidating, pre_score, pre_conditions, consol_high, consol_low, breakout_up = \
     detect_pre_consolidation(k1h, closes_1h, k4h, closes_4h, trend_dir, price)
+
+# ===== v7c核心：头肩顶检测 =====
+hs_detected, hs_details = detect_head_shoulders_top(k1h, closes_1h, price)
+
+# ===== v7c核心：横盘K线计数 =====
+consol_bars_count = count_consolidation_bars(k1h, atr_1h)
 
 # v6备用：横盘确认检测（保留作为备用参考）
 is_consolidating, consol_high_v6, consol_low_v6, consol_size_v6, consol_bars_v6, near_edge, edge_type = \
@@ -736,6 +866,16 @@ if is_pre_consolidating:
 else:
     reasons.append(f'快横盘:未达标(评分{pre_score}/8)')
 
+# v7c核心：头肩顶状态
+if hs_detected:
+    hs = hs_details
+    reasons.append(f'🤷头肩顶✅ 左肩:{hs["left_shoulder"]} 头:{hs["head"]} 右肩:{hs["right_shoulder"]} 颈线:{hs["neckline"]}')
+    reasons.append(f'右肩后横盘:{consol_bars_count}根K线 {"✅≥2" if consol_bars_count >= 2 else "❌<2"}')
+    if hs['broke_neckline']:
+        reasons.append(f'⚠️已破颈线{hs["neckline"]}')
+else:
+    reasons.append(f'头肩顶:未检测到')
+
 # 横盘区间
 if consol_high > 0:
     reasons.append(f'参考区间:{consol_low:.0f}~{consol_high:.0f}(最高价{consol_high:.0f})')
@@ -765,26 +905,49 @@ if can_trade and (trend_down or trend_up):
             'mode': 'breakout'
         })
 
-    # === 核心模式：快横盘预警 → 推送横盘最高价 ===
-    elif not triggered and is_pre_consolidating and not breakout_up:
-        triggered = True
-        signal_mode = 'pre_consolidation'
-
-        if trend_down:
-            # 下跌趋势：推送横盘最高价，用户等高位做空
-            signal = 'short'
-            entry_price = consol_high  # 进场参考价 = 横盘最高价
-            sl = entry_price + 10  # 止损 = 最高价 + 10点
-            tp = entry_price - 10  # 止盈 = 最高价 - 10点
-            reasons.insert(0, f'🔊【快横盘预警】等高位做空')
-            reasons.append(f'📌进场参考价:横盘最高价 {entry_price:.0f} (等价格回到{entry_price:.0f}附近再进)')
-            reasons.append(f'止损:{sl:.0f}(+10点) 止盈:{tp:.0f}(-10点)')
-            reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
-            reasons.append(f'💡推动止盈:盈利10点后止损移到进场价(手动操作)')
-            reasons.append(f'⚠️破位提醒:如果价格突破{consol_high:.0f}往上走，放弃本轮等下一轮')
-
-        elif trend_up:
-            # 上涨趋势：推送横盘最低价，用户等低位做多
+    # === 核心模式：做空必须头肩顶+横盘≥2根，做多保留快横盘逻辑 ===
+    elif not triggered:
+        
+        # ========== 做空逻辑（v7c：头肩顶 + 横盘≥2根） ==========
+        if trend_down and hs_detected:
+            hs = hs_details
+            
+            if consol_bars_count >= 2:
+                # ✅ 头肩顶 + 横盘≥2根 → 可以做空
+                triggered = True
+                signal_mode = 'head_shoulders'
+                signal = 'short'
+                entry_price = hs['right_shoulder']  # 进场参考价 = 右肩价格
+                sl = hs['right_shoulder'] + 10  # 止损 = 右肩 + 10点
+                tp = hs['right_shoulder'] - 10  # 止盈 = 右肩 - 10点
+                reasons.insert(0, f'🔊【头肩顶确认】右肩后横盘{consol_bars_count}根K线，可以做空')
+                reasons.append(f'📌进场参考价:右肩 {entry_price:.0f} (等价格回到{entry_price:.0f}附近再进)')
+                reasons.append(f'止损:{sl:.0f}(+10点) 止盈:{tp:.0f}(-10点)')
+                reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
+                reasons.append(f'💡推动止盈:盈利10点后止损移到进场价(手动操作)')
+                reasons.append(f'⚠️破位提醒:如果价格突破{hs["right_shoulder"]}往上走，放弃本轮等下一轮')
+                
+            else:
+                # 头肩顶已出现，但横盘还不够2根 → 观察状态，不发信号
+                triggered = True
+                signal_mode = 'hs_watching'
+                signal = 'waiting'
+                reasons.insert(0, f'👀【头肩顶观察】右肩后仅横盘{consol_bars_count}根K线，需≥2根才可做空')
+                reasons.append(f'⏳等待更多横盘K线确认后再做空')
+                
+                # 保存观察状态（不发交易信号）
+                if last.get('signal') != 'short':
+                    save_last_signal({
+                        'time': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                        'signal': 'waiting',
+                        'price': price,
+                        'mode': 'hs_watching'
+                    })
+        
+        # ========== 做多逻辑（保留原v7快横盘逻辑） ==========
+        elif trend_up and is_pre_consolidating and not breakout_up:
+            triggered = True
+            signal_mode = 'pre_consolidation'
             signal = 'long'
             entry_price = consol_low  # 进场参考价 = 横盘最低价
             sl = entry_price - 10
@@ -801,12 +964,13 @@ if can_trade and (trend_down or trend_up):
         triggered = True
         signal_mode = 'scalp'
 
-        if trend_down and edge_type == 'upper':
+        if trend_down and edge_type == 'upper' and hs_detected:
+            # 备用做空也要有头肩顶
             signal = 'short'
             entry_price = price
             sl = price + 10
             tp = price - 10
-            reasons.insert(0, f'🔊【横盘确认】横盘上沿做空')
+            reasons.insert(0, f'🔊【横盘确认】横盘上沿做空(头肩顶)')
             reasons.append(f'止损:{sl:.0f}(+10点) 止盈:{tp:.0f}(-10点)')
             reasons.append(f'仓位:0.01手(100美金风险) 盈亏比1:1')
             reasons.append(f'💡推动止盈:盈利10点后止损移到进场价(手动操作)')
@@ -890,6 +1054,10 @@ print(f'Price={price:.2f} Trend={trend_dir}({trend_strength:.0f}%) RSI4h={rsi_4h
 print(f'24h={h24_change:+.2f}% PreScore={pre_score}/8 H1stable={h1_stable}({h1_score}/2)')
 print(f'PreConsolidation: score={pre_score}/8 is_pre={is_pre_consolidating} breakout_up={breakout_up}')
 print(f'Consolidation: {is_consolidating} range={consol_low:.0f}~{consol_high:.0f} edge={edge_type}')
+if hs_detected:
+    print(f'HeadShoulders: LS={hs_details["left_shoulder"]} Head={hs_details["head"]} RS={hs_details["right_shoulder"]} Neckline={hs_details["neckline"]} BarsSinceRS={hs_details["bars_since_rs"]} ConsolBars={consol_bars_count}')
+else:
+    print(f'HeadShoulders: not detected (consol_bars={consol_bars_count})')
 print(f'Breakout: type={breakout_type} bars={bars_in_range} range={range_low:.0f}~{range_high:.0f}')
 if bt_result:
     print(f'Backtest: {bt_result["note"]}')
@@ -962,7 +1130,10 @@ data = {
             'price_position': 'upper' if price > (consol_high + consol_low) / 2 else 'lower' if consol_high > 0 else 'none',
             'stop_loss_points': 10,
             'take_profit_points': 10,
-            'trailing_stop': True
+            'trailing_stop': True,
+            'head_shoulders': hs_detected,
+            'hs_details': hs_details,
+            'consol_bars': consol_bars_count
         },
         'daily': {
             'rsi': round(rsi_d, 1),

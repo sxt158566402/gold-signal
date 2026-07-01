@@ -300,13 +300,22 @@ async function checkSignal() {
       const entryPrice = data.strategy.entry_price || price;
       const preScore = data.strategy.scalp?.pre_score || 0;
       const rangeHigh = data.strategy.scalp?.range_high || 0;
-      let msg = `🔴 做空信号！\n\n📊 当前价: $${price}\n📌 进场参考价: $${entryPrice} (横盘最高价)\n📉 趋势: ${trend}\n📈 RSI(4h): ${rsi}\n🔍 快横盘评分: ${preScore}/8\n💰 仓位: ${positionSize}手 (${positionPct}%)\n🛑 止损: $${stopLoss} (+10点)\n🎯 止盈: $${takeProfit} (-10点)\n\n💡 等价格回到${entryPrice}附近再进场做空\n💡 盈利10点后止损移到进场价\n\n⚠️ 破位${rangeHigh}往上走则放弃本轮`;
+      const hsDetails = data.strategy.scalp?.hs_details || {};
+      const consolBars = data.strategy.scalp?.consol_bars || 0;
+      let msg = `🔴 做空信号！\n\n📊 当前价: $${price}\n📌 进场参考价: $${entryPrice} (右肩价格)\n📈 趋势: ${trend}\n📉 RSI(4h): ${rsi}\n🤷 头肩顶确认: 左肩${hsDetails.left_shoulder} 头${hsDetails.head} 右肩${hsDetails.right_shoulder}\n📏 右肩后横盘: ${consolBars}根K线\n💰 仓位: ${positionSize}手 (${positionPct}%)\n🛑 止损: $${stopLoss} (+10点)\n🎯 止盈: $${takeProfit} (-10点)\n\n💡 等价格回到${entryPrice}附近再进场做空\n💡 盈利10点后止损移到进场价\n\n⚠️ 破位${rangeHigh}往上走则放弃本轮`;
       await broadcastToSubscribers(msg);
       log(`SIGNAL: SHORT @ $${price} entry=$${entryPrice}`);
     } else if (currentSignal === "waiting" && (lastSignal.signal === "long" || lastSignal.signal === "short")) {
       const msg = `⏸️ 信号已结束，回到监控中\n\n📊 当前价: $${price}\n📉 趋势: ${trend}\n💡 等待下一个信号...`;
       await broadcastToSubscribers(msg);
       log(`SIGNAL: back to waiting @ $${price}`);
+    } else if (currentSignal === "waiting" && data.strategy.signal_mode === 'hs_watching' && lastSignal.signal !== 'waiting') {
+      // 头肩顶观察模式：检测到头肩顶但横盘还不够2根
+      const hsDetails = data.strategy.scalp?.hs_details || {};
+      const consolBars = data.strategy.scalp?.consol_bars || 0;
+      const msg = `👀 头肩顶观察\n\n📊 当前价: $${price}\n🤷 头肩顶已出现: 左肩${hsDetails.left_shoulder} 头${hsDetails.head} 右肩${hsDetails.right_shoulder}\n📏 右肩后横盘: ${consolBars}根K线（需≥2根）\n⏳ 等待更多横盘确认后再做空`;
+      await broadcastToSubscribers(msg);
+      log(`SIGNAL: hs_watching @ $${price} consol_bars=${consolBars}`);
     } else if (currentSignal === lastSignal.signal && currentSignal !== "waiting") {
       // 信号维持不变，不重复推送
       return;
