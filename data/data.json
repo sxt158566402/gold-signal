@@ -1,15 +1,15 @@
 {
   "ticker": {
-    "lastPrice": "4343.14",
-    "priceChange": "2.74",
-    "priceChangePercent": "0.06",
+    "lastPrice": "4343.2",
+    "priceChange": "6.6",
+    "priceChangePercent": "0.15",
     "highPrice": 4350.49,
     "lowPrice": 4333.51,
-    "volume": "98.28"
+    "volume": "98.06"
   },
   "strategy": {
     "signal": "short",
-    "price": 4343.14,
+    "price": 4343.2,
     "reason": "\ud83d\udd0a\u5927\u6da8\u540e\u6a2a\u76d8\u2192\u9ad8\u4f4d\u505a\u7a7a | 24h:+7.3% | RSI(4h):38 RSI(1h):24 | ATR:8 | \u6a2a\u76d8\u786e\u8ba4(3/4) | \u6b62\u635f:4355 \u6b62\u76c8:4327",
     "indicators": {
       "rsi": 24.1,
@@ -29,10 +29,10 @@
       "h24_change": 7.29,
       "oscillating": true,
       "osc_score": 3,
-      "stopLoss": 4355.35,
-      "takeProfit": 4326.86
+      "stopLoss": 4355.41,
+      "takeProfit": 4326.92
     }
   },
-  "timestamp": 1786223894980,
+  "timestamp": 1786225877932,
   "source": "github-actions-v3"
 }
