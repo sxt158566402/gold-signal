@@ -1,11 +1,11 @@
 {
   "ticker": {
     "lastPrice": "4586.66",
-    "priceChange": "-8.03",
-    "priceChangePercent": "-0.18",
+    "priceChange": "-8.94",
+    "priceChangePercent": "-0.19",
     "highPrice": 4601.4,
     "lowPrice": 4572.3,
-    "volume": "118.86"
+    "volume": "117.94"
   },
   "strategy": {
     "signal": "waiting",
@@ -33,6 +33,6 @@
       "takeProfit": 0
     }
   },
-  "timestamp": 1787433572852,
+  "timestamp": 1787434915511,
   "source": "github-actions-v3"
 }
