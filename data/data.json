@@ -1,38 +1,38 @@
 {
   "ticker": {
-    "lastPrice": "4343.79",
-    "priceChange": "55.95",
-    "priceChangePercent": "1.29",
-    "highPrice": 4363.42,
-    "lowPrice": 4277.96,
-    "volume": "174.43"
+    "lastPrice": "4320.16",
+    "priceChange": "13.0",
+    "priceChangePercent": "0.3",
+    "highPrice": 4371.59,
+    "lowPrice": 4281.56,
+    "volume": "180.49"
   },
   "strategy": {
     "signal": "waiting",
-    "price": 4343.79,
-    "reason": "24h:-1.5% | RSI(4h):67 RSI(1h):40 | ATR:40 | \u6a2a\u76d8\u786e\u8ba4(3/4)",
+    "price": 4320.16,
+    "reason": "24h:-1.8% | RSI(4h):67 RSI(1h):64 | ATR:42 | \u975e\u6a2a\u76d8(1/4)",
     "indicators": {
-      "rsi": 40.2,
-      "ema7": 4296.84,
-      "ema25": 4300.93,
-      "bbUpper": 4326.53,
-      "bbMiddle": 4299.79,
-      "bbLower": 4273.06,
-      "volatility": 25.39,
-      "stable": true
+      "rsi": 64.4,
+      "ema7": 4306.42,
+      "ema25": 4302.59,
+      "bbUpper": 4324.02,
+      "bbMiddle": 4297.56,
+      "bbLower": 4271.1,
+      "volatility": 7.74,
+      "stable": false
     },
     "h4": {
       "rsi": 67.4,
-      "ema7": 4389.11,
-      "ema25": 4373.91,
-      "atr": 39.74,
-      "h24_change": -1.49,
-      "oscillating": true,
-      "osc_score": 3,
+      "ema7": 4382.77,
+      "ema25": 4370.61,
+      "atr": 42.08,
+      "h24_change": -1.81,
+      "oscillating": false,
+      "osc_score": 1,
       "stopLoss": 0,
       "takeProfit": 0
     }
   },
-  "timestamp": 1789569339895,
+  "timestamp": 1789583107486,
   "source": "github-actions-v3"
 }
